@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Landing from './pages/Landing';
 import AdminDashboard from './pages/AdminDashboard';
 import LecturerDashboard from './pages/LecturerDashboard';
 import StudentDashboard from './pages/StudentDashboard';
@@ -8,6 +10,7 @@ import ManageLecturers from './pages/ManageLecturers';
 import ManageCourses from './pages/ManageCourses';
 import ManageSubjects from './pages/ManageSubjects';
 import ManageClassrooms from './pages/ManageClassrooms';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Simple Layout
@@ -17,6 +20,7 @@ const Layout = ({ children }) => (
       <div className="text-xl font-bold">University Timetable</div>
       <div className="flex gap-4 items-center">
         <a href="/" className="hover:underline">Dashboard</a>
+        <a href="/profile" className="hover:underline">Profile</a>
         <button onClick={() => {
           localStorage.clear();
           window.location.href = '/login';
@@ -53,7 +57,13 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Protected Routes Wrapper */}
+          <Route path="/dashboard" element={<RootRedirect />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
@@ -71,8 +81,13 @@ function App() {
             <Route path="/student" element={<Layout><StudentDashboard /></Layout>} />
           </Route>
 
-          {/* Smart Root Redirect */}
-          <Route path="/" element={<RootRedirect />} />
+          {/* Shared Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'lecturer', 'student']} />}>
+            <Route path="/profile" element={<Layout><Profile /></Layout>} />
+          </Route>
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>
