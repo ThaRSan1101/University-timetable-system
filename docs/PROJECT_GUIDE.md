@@ -91,8 +91,16 @@ If your friend wants to run this project on their laptop, send them these instru
 #### **Step 1: Get the Code**
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ThaRSan1101/University-timetable-system.git
 cd university-timetable-system
+```
+
+#### **Step 1.1: Pulling Latest Changes (For Team Members)**
+
+If you already have the project and want to get the latest updates:
+
+```bash
+git pull origin main
 ```
 
 #### **Step 2: Setup Backend**
@@ -112,7 +120,10 @@ pip install -r requirements.txt    # Install dependencies
 
 1. Open **MySQL Workbench** or **phpMyAdmin**.
 2. Create a new empty database named `university_timetable`.
-3. Open `backend/.env` file (create it if missing) and set your password:
+3. **Create the Environment File**:
+    * Duplicate the file `backend/.env.example`.
+    * Rename the copy to `backend/.env`.
+    * Open `backend/.env` and set your MySQL password:
 
     ```env
     DB_NAME=university_timetable
