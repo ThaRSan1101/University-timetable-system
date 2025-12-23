@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import api from '../services/api';
 import { jwtDecode } from "jwt-decode"; // Need to install jwt-decode
 
@@ -8,24 +8,14 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                // We might need to fetch full user details if not in token
-                // For now, assume token has user_id and we can fetch or just store basic info
-                // Let's fetch user details
-                fetchUser(decoded.user_id);
-            } catch (e) {
-                logout();
-            }
-        } else {
-            setLoading(false);
-        }
+    const logout = useCallback(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        setUser(null);
+        setLoading(false);
     }, []);
 
-    const fetchUser = async (id) => {
+    const fetchUser = useCallback(async (id) => {
         try {
             const response = await api.get(`users/${id}/`);
             setUser(response.data);
@@ -35,7 +25,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [logout]);
 
     const login = async (email, password) => {
         const response = await api.post('auth/login/', { email, password });
@@ -46,12 +36,22 @@ export const AuthProvider = ({ children }) => {
         await fetchUser(decoded.user_id);
     };
 
-    const logout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        setUser(null);
-        setLoading(false);
-    };
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                // We might need to fetch full user details if not in token
+                // For now, assume token has user_id and we can fetch or just store basic info
+                // Let's fetch user details
+                fetchUser(decoded.user_id);
+            } catch {
+                logout();
+            }
+        } else {
+            setLoading(false);
+        }
+    }, [fetchUser, logout]);
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading }}>
@@ -60,4 +60,5 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

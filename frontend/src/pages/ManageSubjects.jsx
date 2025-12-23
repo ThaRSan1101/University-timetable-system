@@ -32,7 +32,7 @@ const ManageSubjects = () => {
             setSubjects(subRes.data);
             setCourses(courseRes.data);
             setLecturers(lecRes.data);
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch data");
         } finally {
             setLoading(false);
@@ -46,7 +46,7 @@ const ManageSubjects = () => {
             // Reset form but keep some defaults
             setFormData(prev => ({ ...prev, name: '', code: '' }));
             fetchData();
-        } catch (error) {
+        } catch {
             alert('Error creating subject');
         }
     };

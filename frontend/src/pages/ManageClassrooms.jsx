@@ -14,7 +14,7 @@ const ManageClassrooms = () => {
         try {
             const response = await api.get('classrooms/');
             setClassrooms(response.data);
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch classrooms");
         } finally {
             setLoading(false);
@@ -27,7 +27,7 @@ const ManageClassrooms = () => {
             await api.post('classrooms/', formData);
             setFormData({ room_number: '', room_type: 'lecture', capacity: '' });
             fetchClassrooms();
-        } catch (error) {
+        } catch {
             alert('Error creating classroom');
         }
     };

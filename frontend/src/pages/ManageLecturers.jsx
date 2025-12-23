@@ -19,7 +19,7 @@ const ManageLecturers = () => {
         try {
             const response = await api.get('lecturers/');
             setLecturers(response.data);
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch lecturers");
         } finally {
             setLoading(false);
@@ -35,7 +35,7 @@ const ManageLecturers = () => {
             setMessage('Lecturer created successfully! Password sent to email.');
             setFormData({ email: '', faculty: '', department: '' });
             fetchLecturers();
-        } catch (error) {
+        } catch {
             setMessage('Error creating lecturer. Email might be taken.');
         }
     };
