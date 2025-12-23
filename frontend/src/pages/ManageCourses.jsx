@@ -14,7 +14,7 @@ const ManageCourses = () => {
         try {
             const response = await api.get('courses/');
             setCourses(response.data);
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch courses");
         } finally {
             setLoading(false);
@@ -27,7 +27,7 @@ const ManageCourses = () => {
             await api.post('courses/', formData);
             setFormData({ name: '', code: '' });
             fetchCourses();
-        } catch (error) {
+        } catch {
             alert('Error creating course');
         }
     };
