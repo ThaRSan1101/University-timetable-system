@@ -11,6 +11,8 @@ import ManageCourses from './pages/ManageCourses';
 import ManageSubjects from './pages/ManageSubjects';
 import ManageClassrooms from './pages/ManageClassrooms';
 import Profile from './pages/Profile';
+import Modules from './pages/Modules';
+import Grades from './pages/Grades';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Simple Layout
@@ -78,12 +80,14 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="/student" element={<Layout><StudentDashboard /></Layout>} />
+            <Route path="/student" element={<StudentDashboard />} />
+            <Route path="/modules" element={<Modules />} />
+            <Route path="/grades" element={<Grades />} />
           </Route>
 
           {/* Shared Protected Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'lecturer', 'student']} />}>
-            <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* Catch all - redirect to home */}
