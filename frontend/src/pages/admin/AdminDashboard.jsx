@@ -274,7 +274,7 @@ const AdminDashboard = () => {
                                             <td className="px-6 py-4 text-sm font-bold text-gray-900">Capacity Overflow</td>
                                             <td className="px-6 py-4">
                                                 <p className="text-sm font-bold text-gray-900">Auditorium A</p>
-                                                <p className="text-xs text-gray-500">Course enrollment (120) > Room Cap (100)</p>
+                                                <p className="text-xs text-gray-500">Course enrollment (120) {'>'} Room Cap (100)</p>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button className="text-blue-600 hover:text-blue-800 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">Resolve</button>

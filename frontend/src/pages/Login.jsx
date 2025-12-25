@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import uwuLogo from '../assets/uwu.png';
+import login3 from '../assets/login3.jpg';
+import register4 from '../assets/register4.jpg';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -27,9 +30,9 @@ const Login = () => {
     ];
 
     const images = [
-        'https://images.unsplash.com/photo-1562774053-701939374585?w=1200&h=1200&fit=crop',
+        login3,
         'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&h=1200&fit=crop',
-        'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&h=1200&fit=crop'
+        register4
     ];
 
     // Auto-slide images every 3 seconds
@@ -57,7 +60,7 @@ const Login = () => {
             {/* Centered Card Container */}
             <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
                 {/* Left Side - Image and Carousel */}
-                <div className="lg:w-1/2 relative bg-gradient-to-br from-blue-600 to-blue-800 min-h-[300px] lg:min-h-[600px]">
+                <div className="lg:w-1/2 relative bg-gradient-to-br from-blue-900 to-blue-950 min-h-[300px] lg:min-h-[600px]">
                     {/* Background Images with Sliding Effect */}
                     <div className="absolute inset-0">
                         {images.map((image, index) => (
@@ -72,32 +75,12 @@ const Login = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
                     </div>
 
-                    {/* Image Navigation Dots */}
-                    <div className="absolute top-8 right-8 z-20 flex gap-2">
-                        {images.map((_, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setCurrentImageIndex(index)}
-                                className={`h-2 rounded-full transition-all ${index === currentImageIndex
-                                        ? 'w-8 bg-white'
-                                        : 'w-2 bg-white/50 hover:bg-white/75'
-                                    }`}
-                                aria-label={`Go to image ${index + 1}`}
-                            />
-                        ))}
-                    </div>
+
 
                     {/* Content Overlay */}
                     <div className="relative z-10 flex flex-col justify-between p-8 lg:p-12 text-white h-full">
-                        {/* Logo/Icon */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                            <span className="text-xl font-bold">UniSchedule</span>
-                        </div>
+                        {/* Logo/Icon removed */}
+                        <div></div>
 
                         {/* Carousel Content */}
                         <div className="mb-8">
@@ -108,20 +91,7 @@ const Login = () => {
                                 Join students, lecturers, and admins in the most efficient university timetable generation system.
                             </p>
 
-                            {/* Carousel Indicators */}
-                            <div className="flex gap-2 mt-6">
-                                {slides.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setCurrentSlide(index)}
-                                        className={`h-1 rounded-full transition-all ${index === currentSlide
-                                                ? 'w-8 bg-blue-400'
-                                                : 'w-6 bg-white/40 hover:bg-white/60'
-                                            }`}
-                                        aria-label={`Go to slide ${index + 1}`}
-                                    />
-                                ))}
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -161,7 +131,7 @@ const Login = () => {
                                     </div>
                                     <input
                                         type="email"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 transition"
                                         placeholder="e.g. name@university.edu"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -176,7 +146,7 @@ const Login = () => {
                                     <label className="block text-sm font-semibold text-gray-900">
                                         Password
                                     </label>
-                                    <a href="#forgot" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                                    <a href="#forgot" className="text-sm text-blue-900 hover:text-blue-800 font-medium">
                                         Forgot Password?
                                     </a>
                                 </div>
@@ -188,7 +158,7 @@ const Login = () => {
                                     </div>
                                     <input
                                         type="password"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 transition"
                                         placeholder="Min. 8 characters"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
@@ -200,7 +170,7 @@ const Login = () => {
                             {/* Login Button */}
                             <button
                                 type="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-lg transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                className="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3.5 rounded-lg transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                             >
                                 Log In
                             </button>
@@ -209,7 +179,7 @@ const Login = () => {
                         {/* Register Link */}
                         <div className="mt-6 text-center text-sm text-gray-600">
                             New to the university?{' '}
-                            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+                            <Link to="/register" className="text-blue-900 hover:text-blue-800 font-semibold inline-flex gap-1">
                                 Create Account
                             </Link>
                         </div>
