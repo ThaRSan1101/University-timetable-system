@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import Sidebar from '../components/Sidebar';
+import { useAuth } from '../../context/AuthContext';
+import Sidebar from '../../components/Sidebar';
 
 const Grades = () => {
     const { user } = useAuth();

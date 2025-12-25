@@ -1,7 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
-    const { user } = useAuth();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <div className="w-64 bg-white border-r border-gray-200 p-6 fixed left-0 top-0 h-screen overflow-y-auto">
@@ -47,10 +54,7 @@ const Sidebar = () => {
             {/* Logout Button */}
             <div className="absolute bottom-6 left-6 right-6">
                 <button
-                    onClick={() => {
-                        localStorage.removeItem('token');
-                        window.location.href = '/login';
-                    }}
+                    onClick={handleLogout}
                     className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import Sidebar from '../components/Sidebar';
+import StudentSidebar from '../components/Sidebar';
+import LecturerSidebar from '../components/LecturerSidebar';
 
 const Profile = () => {
     const { user, loading: authLoading } = useAuth();
@@ -53,10 +54,10 @@ const Profile = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            <Sidebar />
+            {user.role === 'lecturer' ? <LecturerSidebar /> : <StudentSidebar />}
 
             {/* Main Content */}
-            <div className="flex-1 ml-64 overflow-auto">
+            <div className={`flex-1 ${user.role === 'lecturer' ? 'ml-72' : 'ml-64'} overflow-auto`}>
                 <div className="p-8">
                     <h1 className="text-3xl font-bold mb-6 text-gray-900">My Profile</h1>
 

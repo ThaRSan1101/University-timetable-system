@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import Sidebar from '../components/Sidebar';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import Sidebar from '../../components/Sidebar';
 
 const Modules = () => {
     const { user } = useAuth();
