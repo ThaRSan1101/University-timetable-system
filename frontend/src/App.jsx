@@ -3,14 +3,17 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
-import AdminDashboard from './pages/AdminDashboard';
-import LecturerDashboard from './pages/LecturerDashboard';
-import StudentDashboard from './pages/StudentDashboard';
-import ManageLecturers from './pages/ManageLecturers';
-import ManageCourses from './pages/ManageCourses';
-import ManageSubjects from './pages/ManageSubjects';
-import ManageClassrooms from './pages/ManageClassrooms';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import LecturerDashboard from './pages/lecturer/LecturerDashboard';
+import StudentDashboard from './pages/student/StudentDashboard';
+import ManageLecturers from './pages/admin/ManageLecturers';
+import ManageCourses from './pages/admin/ManageCourses';
+import ManageSubjects from './pages/admin/ManageSubjects';
+import ManageClassrooms from './pages/admin/ManageClassrooms';
 import Profile from './pages/Profile';
+import Modules from './pages/student/Modules';
+import Grades from './pages/student/Grades';
+import LecturerAssessments from './pages/lecturer/LecturerAssessments';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Simple Layout
@@ -66,24 +69,27 @@ function App() {
           <Route path="/dashboard" element={<RootRedirect />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
-            <Route path="/admin/lecturers" element={<Layout><ManageLecturers /></Layout>} />
-            <Route path="/admin/courses" element={<Layout><ManageCourses /></Layout>} />
-            <Route path="/admin/subjects" element={<Layout><ManageSubjects /></Layout>} />
-            <Route path="/admin/classrooms" element={<Layout><ManageClassrooms /></Layout>} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/lecturers" element={<ManageLecturers />} />
+            <Route path="/admin/courses" element={<ManageCourses />} />
+            <Route path="/admin/subjects" element={<ManageSubjects />} />
+            <Route path="/admin/classrooms" element={<ManageClassrooms />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['lecturer']} />}>
-            <Route path="/lecturer" element={<Layout><LecturerDashboard /></Layout>} />
+            <Route path="/lecturer" element={<LecturerDashboard />} />
+            <Route path="/lecturer/assessments" element={<LecturerAssessments />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="/student" element={<Layout><StudentDashboard /></Layout>} />
+            <Route path="/student" element={<StudentDashboard />} />
+            <Route path="/modules" element={<Modules />} />
+            <Route path="/grades" element={<Grades />} />
           </Route>
 
           {/* Shared Protected Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'lecturer', 'student']} />}>
-            <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* Catch all - redirect to home */}
