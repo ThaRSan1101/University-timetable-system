@@ -4,6 +4,7 @@ import { useState } from 'react';
 import uwuLogo from '../assets/uwu.png';
 import studentsImg from '../assets/students.jpg';
 import lecturerImg from '../assets/lecturer.jpg';
+import uwuHero from '../assets/uwu_hero.jpg';
 
 const Landing = () => {
     const { user, loading } = useAuth();
@@ -11,10 +12,7 @@ const Landing = () => {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
-    // If already logged in, redirect to dashboard
-    if (user) {
-        return <Navigate to="/dashboard" replace />;
-    }
+
 
     return (
 
@@ -23,10 +21,10 @@ const Landing = () => {
             <header className="bg-white text-gray-900 shadow-sm sticky top-0 z-50">
                 <nav className="w-full px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center gap-1">
+                    <Link to="/" className="flex items-center gap-1">
                         <img src={uwuLogo} alt="UWU Logo" className="w-20 h-20 object-contain" />
                         <span className="text-lg font-serif font-semibold tracking-wide text-blue-900">Uva Wellassa University</span>
-                    </div>
+                    </Link>
 
 
 
@@ -71,8 +69,8 @@ const Landing = () => {
                 {/* Background Image */}
                 <div className="absolute inset-0">
                     <img
-                        src="https://images.unsplash.com/photo-1562774053-701939374585?w=1920&q=80&fit=crop"
-                        alt="University Students"
+                        src={uwuHero}
+                        alt="Uva Wellassa University"
                         className="w-full h-full object-cover object-center"
                     />
                     {/* Gradient Overlay - Blue Theme */}
@@ -343,10 +341,10 @@ const Landing = () => {
                     <div className="flex flex-col lg:flex-row justify-between gap-12 mb-12">
                         {/* Left Side: Brand, Desc, Socials */}
                         <div className="max-w-sm">
-                            <div className="flex items-center gap-1 mb-4">
+                            <Link to="/" className="flex items-center gap-1 mb-4">
                                 <img src={uwuLogo} alt="UWU Logo" className="w-20 h-20 object-contain" />
                                 <span className="text-lg font-semibold text-gray-900">Uva Wellassa University</span>
-                            </div>
+                            </Link>
                             <p className="text-sm text-gray-600 mb-6">
                                 The Uva Wellassa System is an innovative timetabling solution designed to enhance technology and student experience.
                             </p>

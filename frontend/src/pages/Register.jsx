@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
-import login3 from '../assets/login3.jpg';
 import register4 from '../assets/register4.jpg';
 import uwuLogo from '../assets/uwu.png';
 
@@ -33,7 +32,6 @@ const Register = () => {
     ];
 
     const images = [
-        login3,
         'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&h=1200&fit=crop',
         register4
     ];
@@ -84,11 +82,11 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            {/* Centered Card Container */}
-            <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+        <div className="min-h-screen bg-white">
+            {/* Full Screen Container */}
+            <div className="w-full min-h-screen flex flex-col lg:flex-row">
                 {/* Left Side - Image and Carousel */}
-                <div className="lg:w-1/2 relative bg-gradient-to-br from-blue-900 to-blue-950 min-h-[250px] lg:min-h-[600px]">
+                <div className="lg:w-1/2 relative bg-gradient-to-br from-blue-900 to-blue-950 min-h-[300px] lg:min-h-screen">
                     {/* Background Images with Sliding Effect */}
                     <div className="absolute inset-0">
                         {images.map((image, index) => (
@@ -96,43 +94,47 @@ const Register = () => {
                                 key={index}
                                 src={image}
                                 alt={`University ${index + 1}`}
-                                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${index === currentImageIndex ? 'opacity-90' : 'opacity-0'
+                                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${index === currentImageIndex ? 'opacity-90' : 'opacity-0'
                                     }`}
                             />
                         ))}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
                     </div>
 
-
-
                     {/* Content Overlay */}
-                    <div className="relative z-10 flex flex-col justify-between p-8 lg:p-12 text-white h-full">
-                        {/* Logo/Icon removed */}
-                        <div></div>
+                    <div className="relative z-10 flex flex-col p-8 lg:p-16 text-white h-full">
+                        {/* Empty top space */}
+                        <div className="flex-grow"></div>
 
-                        {/* Carousel Content */}
-                        <div className="mb-8">
-                            <h1 className="text-3xl lg:text-4xl font-bold mb-4 leading-tight">
-                                Master your semester planning.
-                            </h1>
-                            <p className="text-base lg:text-lg text-blue-100 leading-relaxed max-w-md">
-                                Join students, lecturers, and admins in the most efficient university timetable generation system.
+                        {/* Bottom Content Wrapper */}
+                        <div>
+                            {/* Carousel Content */}
+                            <div className="mb-8">
+                                <h1 className="text-3xl lg:text-5xl font-bold mb-6 leading-tight">
+                                    Master your semester planning.
+                                </h1>
+                                <p className="text-lg lg:text-xl text-blue-100 leading-relaxed max-w-md">
+                                    Join students, lecturers, and admins in the most efficient university timetable generation system.
+                                </p>
+                            </div>
+
+                            {/* Footer */}
+                            <p className="text-sm text-blue-200/60">
+                                © {new Date().getFullYear()} UniSchedule System. All rights reserved.
                             </p>
-
-
                         </div>
                     </div>
                 </div>
 
                 {/* Right Side - Registration Form */}
-                <div className="lg:w-1/2 flex items-center justify-center p-6 lg:p-10">
+                <div className="lg:w-1/2 flex flex-col items-center justify-center p-8 lg:p-16 bg-white">
                     <div className="w-full max-w-md">
                         {/* Welcome Text */}
-                        <div className="mb-6">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                        <div className="mb-8">
+                            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
                                 Create your account
                             </h2>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 text-lg">
                                 Enter your details below to get started.
                             </p>
                         </div>
@@ -145,21 +147,21 @@ const Register = () => {
                         )}
 
                         {/* Registration Form */}
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Email Input */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                                     University Email
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                         </svg>
                                     </div>
                                     <input
                                         type="email"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 transition"
+                                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition-all bg-gray-50/30"
                                         placeholder="e.g. name@university.edu"
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -174,14 +176,14 @@ const Register = () => {
                                     Password
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                         </svg>
                                     </div>
                                     <input
                                         type="password"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 transition"
+                                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition-all bg-gray-50/30"
                                         placeholder="Min. 8 characters"
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -196,14 +198,14 @@ const Register = () => {
                                     Confirm Password
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
                                     <input
                                         type="password"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 transition"
+                                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition-all bg-gray-50/30"
                                         placeholder="Repeat password"
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -216,7 +218,7 @@ const Register = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3.5 rounded-lg transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-4 rounded-xl transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${loading ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {loading ? 'Creating Account...' : 'Create Account'}
@@ -224,21 +226,14 @@ const Register = () => {
                         </form>
 
                         {/* Login Link */}
-                        <div className="mt-6 text-center text-sm text-gray-600">
+                        <div className="mt-8 text-center text-gray-600">
                             Already have an account?{' '}
-                            <Link to="/login" className="text-blue-900 hover:text-blue-800 font-semibold gap-1 inline-flex">
+                            <Link to="/login" className="text-blue-900 hover:text-blue-800 font-bold gap-1 inline-flex">
                                 Log in
                             </Link>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Footer - Outside the card */}
-            <div className="absolute bottom-4 left-0 right-0">
-                <p className="text-xs text-gray-500 text-center">
-                    © {new Date().getFullYear()} UniSchedule System. All rights reserved.
-                </p>
             </div>
         </div>
     );
