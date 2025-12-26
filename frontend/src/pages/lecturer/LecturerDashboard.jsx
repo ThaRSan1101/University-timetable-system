@@ -33,6 +33,38 @@ const LecturerDashboard = () => {
             end_time: '12:00',
             subject_details: { name: 'Machine Learning', course_name: 'Data Science' },
             classroom_details: { room_number: 'Room 304' }
+        },
+        {
+            id: 4,
+            day: 'Wednesday',
+            start_time: '09:00',
+            end_time: '12:00',
+            subject_details: { name: 'Software Engineering', course_name: 'Software Engineering' },
+            classroom_details: { room_number: 'Web Lab' }
+        },
+        {
+            id: 5,
+            day: 'Thursday',
+            start_time: '14:00',
+            end_time: '16:00',
+            subject_details: { name: 'Computer Networks', course_name: 'Network Engineering' },
+            classroom_details: { room_number: 'Hall B' }
+        },
+        {
+            id: 6,
+            day: 'Friday',
+            start_time: '11:00',
+            end_time: '13:00',
+            subject_details: { name: 'Mobile Computing', course_name: 'Computer Science' },
+            classroom_details: { room_number: 'Lab 02' }
+        },
+        {
+            id: 7,
+            day: 'Wednesday',
+            start_time: '14:00',
+            end_time: '15:00',
+            subject_details: { name: 'Project Management', course_name: 'Business IT' },
+            classroom_details: { room_number: 'Room 102' }
         }
     ];
 
@@ -40,11 +72,17 @@ const LecturerDashboard = () => {
         const fetchTimetable = async () => {
             try {
                 const response = await api.get(`timetable/?lecturer_id=${user.id}`);
-                if (response.data && response.data.length > 0) {
-                    setTimetable(response.data);
-                } else {
-                    setTimetable(dummyTimetable);
-                }
+                // Merge API data with dummy data to ensure visibility during testing
+                const apiData = response.data || [];
+                const combinedData = [...apiData];
+
+                // Add dummy data that doesn't overlap with API data (simple check)
+                dummyTimetable.forEach(dummy => {
+                    const exists = apiData.some(api => api.day === dummy.day && api.start_time === dummy.start_time);
+                    if (!exists) combinedData.push(dummy);
+                });
+
+                setTimetable(combinedData);
             } catch (error) {
                 console.error("Error fetching timetable, using dummy data", error);
                 setTimetable(dummyTimetable);
@@ -59,7 +97,33 @@ const LecturerDashboard = () => {
     const timeSlots = Array.from({ length: 11 }, (_, i) => `${8 + i}:00`);
 
     const getDayClasses = (day) => {
-        return timetable.filter(slot => slot.day === day);
+        const classes = timetable.filter(slot => slot.day === day);
+        if (classes.length === 0) return [];
+
+        // Sort by start time to handle merging
+        const sorted = [...classes].sort((a, b) => a.start_time.localeCompare(b.start_time));
+        const merged = [];
+
+        if (sorted.length > 0) {
+            let current = { ...sorted[0] };
+            for (let i = 1; i < sorted.length; i++) {
+                const next = sorted[i];
+                // Normalize times for comparison
+                const currentEnd = formatTime(current.end_time);
+                const nextStart = formatTime(next.start_time);
+
+                // Merge if same subject name and back-to-back
+                if (current.subject_details.name === next.subject_details.name &&
+                    currentEnd === nextStart) {
+                    current.end_time = next.end_time;
+                } else {
+                    merged.push(current);
+                    current = { ...next };
+                }
+            }
+            merged.push(current);
+        }
+        return merged;
     };
 
     const getClassPosition = (startTime) => {
@@ -100,10 +164,11 @@ const LecturerDashboard = () => {
 
     const colors = [
         'bg-blue-100 border-blue-500 text-blue-700',
-        'bg-indigo-100 border-indigo-500 text-indigo-700',
-        'bg-slate-100 border-slate-500 text-slate-700',
-        'bg-sky-100 border-sky-500 text-sky-700',
-        'bg-blue-50 border-blue-900/20 text-blue-900',
+        'bg-green-100 border-green-500 text-green-700',
+        'bg-purple-100 border-purple-500 text-purple-700',
+        'bg-orange-100 border-orange-500 text-orange-700',
+        'bg-pink-100 border-pink-500 text-pink-700',
+        'bg-teal-100 border-teal-500 text-teal-700',
     ];
 
     const getColorForSubject = (subjectName) => {
@@ -156,7 +221,7 @@ const LecturerDashboard = () => {
                             </button>
                             <button
                                 onClick={handleExport}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white rounded-xl font-semibold transition-all shadow-lg hover:bg-black active:scale-95"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white rounded-xl font-semibold transition-all shadow-lg hover:bg-blue-800 active:scale-95"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -169,20 +234,20 @@ const LecturerDashboard = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                         {/* Control Sidebar */}
                         <div className="lg:col-span-1 space-y-6">
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                                        <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                                         </svg>
-                                        Preferences
+                                        Filters
                                     </div>
                                     <button className="text-blue-900 text-sm font-bold hover:underline">Reset</button>
                                 </div>
 
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">View Mode</label>
+                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">VIEW MODE</label>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => setViewMode('calendar')}
@@ -212,7 +277,7 @@ const LecturerDashboard = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">Department</label>
+                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">DEPARTMENT</label>
                                         <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-medium">
                                             <option>All Modules</option>
                                             <option>CS - General</option>
@@ -221,7 +286,7 @@ const LecturerDashboard = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">Quick Search</label>
+                                        <label className="block text-sm font-semibold text-gray-700 uppercase mb-2">QUICK SEARCH</label>
                                         <div className="relative">
                                             <input
                                                 type="text"
@@ -271,7 +336,7 @@ const LecturerDashboard = () => {
                                     {/* Days Sidebar/Header */}
                                     <div className="grid grid-cols-6 border-b border-gray-100 bg-gray-50/50">
                                         <div className="p-4 border-r border-gray-100 flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {/* Clock icon removed as requested */}
                                         </div>
                                         {days.map((day, index) => {
                                             const date = new Date();
@@ -281,7 +346,7 @@ const LecturerDashboard = () => {
                                             return (
                                                 <div key={day} className={`p-4 text-center border-l border-gray-100 first:border-l-0 ${isToday ? 'bg-blue-50/30' : ''}`}>
                                                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{day.substring(0, 3)}</div>
-                                                    <div className={`text-xl font-bold ${isToday ? 'text-blue-900 border-b-2 border-blue-900 pb-1' : 'text-gray-700'}`}>
+                                                    <div className={`text-2xl font-bold ${isToday ? 'bg-blue-900 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto' : 'text-gray-700'}`}>
                                                         {date.getDate()}
                                                     </div>
                                                 </div>
@@ -294,7 +359,7 @@ const LecturerDashboard = () => {
                                             {/* Time Column */}
                                             <div className="border-r border-gray-100 bg-gray-50/30">
                                                 {timeSlots.map(time => (
-                                                    <div key={time} className="h-24 border-b border-gray-50 px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                                                    <div key={time} className="h-20 border-b border-gray-50 px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                         {time}
                                                     </div>
                                                 ))}
@@ -304,18 +369,18 @@ const LecturerDashboard = () => {
                                             {days.map(day => (
                                                 <div key={day} className="relative border-l border-gray-100 group">
                                                     {timeSlots.map(time => (
-                                                        <div key={time} className="h-24 border-b border-gray-50 group-hover:bg-gray-50/50 transition-colors"></div>
+                                                        <div key={time} className="h-20 border-b border-gray-50 group-hover:bg-gray-50/50 transition-colors"></div>
                                                     ))}
 
                                                     {getDayClasses(day).map(slot => {
-                                                        const top = getClassPosition(slot.start_time) * 96; // 96px is h-24
-                                                        const height = getClassDuration(slot.start_time, slot.end_time) * 96;
+                                                        const top = getClassPosition(slot.start_time) * 80; // 80px is h-20
+                                                        const height = getClassDuration(slot.start_time, slot.end_time) * 80;
                                                         const colorClass = getColorForSubject(slot.subject_details.name);
 
                                                         return (
                                                             <div
                                                                 key={slot.id}
-                                                                className={`absolute left-1 right-1 ${colorClass} rounded-xl p-3 border-l-4 shadow-sm hover:translate-y-[-2px] hover:shadow-md transition-all cursor-pointer z-10`}
+                                                                className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:translate-y-[-2px] hover:shadow-md transition-all cursor-pointer z-10`}
                                                                 style={{ top: `${top}px`, height: `${height}px` }}
                                                             >
                                                                 <div className="flex flex-col h-full justify-between">

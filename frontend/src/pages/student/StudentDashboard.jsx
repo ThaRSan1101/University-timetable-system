@@ -276,17 +276,28 @@ const StudentDashboard = () => {
                             </div>
 
                             {nextClass && (
-                                <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 mt-6">
-                                    <div className="flex items-center gap-2 text-blue-600 font-semibold mb-3">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Next Class
+                                <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group mt-6">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
                                     </div>
-                                    <div className="bg-white rounded-lg p-4">
-                                        <p className="text-sm text-gray-500 mb-1">In {nextClass.minutesUntil} mins</p>
-                                        <p className="font-bold text-gray-900 mb-1">{nextClass.subject_details.name}</p>
-                                        <p className="text-sm text-gray-600">Room {nextClass.classroom_details.room_number} • {nextClass.subject_details.lecturer_name}</p>
+                                    <div className="relative z-10">
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-blue-300 mb-4 flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                                            Current Status
+                                        </p>
+                                        <p className="text-sm font-medium text-blue-100 mb-1">Up Next in {nextClass.minutesUntil} mins</p>
+                                        <h4 className="text-xl font-bold mb-4 leading-tight">{nextClass.subject_details.name}</h4>
+                                        <div className="flex items-center gap-3 text-xs font-semibold bg-white/10 p-3 rounded-xl border border-white/10">
+                                            <div className="flex flex-col">
+                                                <span className="text-blue-300 uppercase text-[9px]">Venue</span>
+                                                <span>Room {nextClass.classroom_details.room_number}</span>
+                                            </div>
+                                            <div className="w-[1px] h-8 bg-white/10 mx-1"></div>
+                                            <div className="flex flex-col overflow-hidden">
+                                                <span className="text-blue-300 uppercase text-[9px]">Lecturer</span>
+                                                <span className="truncate">{nextClass.subject_details.lecturer_name}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

@@ -78,7 +78,7 @@ const LecturerAssessments = () => {
                         {!showPanel && (
                             <button
                                 onClick={handleOpenCreate}
-                                className="bg-blue-900 hover:bg-black text-white px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md active:scale-95 transition-all"
+                                className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md active:scale-95 transition-all"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -130,8 +130,8 @@ const LecturerAssessments = () => {
                                             <td className="px-6 py-4 text-gray-500 text-sm">{assessment.dueDate}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.status === 'Active' ? 'bg-green-100 text-green-700' :
-                                                        assessment.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                                                            'bg-yellow-100 text-yellow-700'
+                                                    assessment.status === 'Canceled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-yellow-100 text-yellow-700'
                                                     }`}>
                                                     {assessment.status}
                                                 </span>
@@ -139,7 +139,7 @@ const LecturerAssessments = () => {
                                             <td className="px-6 py-4 text-right">
                                                 <button
                                                     onClick={() => handleOpenEdit(assessment)}
-                                                    className="text-blue-900 hover:text-black mr-4 text-sm font-medium"
+                                                    className="text-blue-900 hover:text-blue-700 mr-4 text-sm font-medium"
                                                 >
                                                     Edit
                                                 </button>
@@ -238,7 +238,7 @@ const LecturerAssessments = () => {
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                className="w-full py-4 text-sm font-semibold uppercase text-white bg-blue-900 rounded-xl hover:bg-black shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                                className="w-full py-4 text-sm font-semibold uppercase text-white bg-blue-900 rounded-xl hover:bg-blue-800 shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
                             >
                                 {editingId ? (
                                     <>
