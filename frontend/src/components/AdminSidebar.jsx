@@ -31,6 +31,11 @@ const AdminSidebar = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 4v12l-4-2-4 2V4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             )
         },
+        {
+            name: 'Profile', path: '/profile', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            )
+        },
     ];
 
     const handleLogout = () => {
@@ -41,7 +46,7 @@ const AdminSidebar = () => {
     return (
         <aside className="w-72 bg-gradient-to-b from-blue-900 to-blue-950 text-white fixed left-0 top-0 h-screen flex flex-col z-20 shadow-2xl">
             {/* Logo Section */}
-            <div className="pl-2 pr-4 py-8 pb-4 flex items-center gap-3">
+            <div className="pl-2 pr-4 pt-5 pb-4 flex items-center gap-3">
                 <img src={uwuLogo} alt="UWU Logo" className="w-16 h-16 object-contain" />
                 <div>
                     <span className="text-base font-bold tracking-wide whitespace-nowrap">Uva Wellassa University</span>
@@ -50,7 +55,7 @@ const AdminSidebar = () => {
             </div>
 
             {/* Navigation Container */}
-            <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto">
+            <nav className="flex-1 px-4 pt-2 pb-8 space-y-1 overflow-y-auto">
                 <h3 className="px-4 text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-4 opacity-50">Management</h3>
                 {navItems.map((item) => (
                     <Link

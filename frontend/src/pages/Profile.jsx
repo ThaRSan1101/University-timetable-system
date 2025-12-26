@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import StudentSidebar from '../components/Sidebar';
 import LecturerSidebar from '../components/LecturerSidebar';
+import AdminSidebar from '../components/AdminSidebar';
 
 const Profile = () => {
     const { user, loading: authLoading } = useAuth();
@@ -52,7 +53,13 @@ const Profile = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            {user.role === 'lecturer' ? <LecturerSidebar /> : <StudentSidebar />}
+            {user.role === 'admin' ? (
+                <AdminSidebar />
+            ) : user.role === 'lecturer' ? (
+                <LecturerSidebar />
+            ) : (
+                <StudentSidebar />
+            )}
 
             <div className="flex-1 ml-72 overflow-auto">
                 <div className="p-8">

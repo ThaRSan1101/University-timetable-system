@@ -56,7 +56,7 @@ const Sidebar = () => {
     return (
         <aside className="w-72 bg-gradient-to-b from-blue-900 to-blue-950 text-white fixed left-0 top-0 h-screen flex flex-col z-20 shadow-2xl">
             {/* Logo Section */}
-            <div className="pl-2 pr-4 py-8 pb-4 flex items-center gap-3">
+            <div className="pl-2 pr-4 pt-5 pb-4 flex items-center gap-3">
                 <img src={uwuLogo} alt="UWU Logo" className="w-16 h-16 object-contain" />
                 <div>
                     <span className="text-base font-bold tracking-wide whitespace-nowrap">Uva Wellassa University</span>
@@ -65,7 +65,7 @@ const Sidebar = () => {
             </div>
 
             {/* Navigation Container */}
-            <nav className="flex-1 px-4 py-8 space-y-2">
+            <nav className="flex-1 px-4 pt-2 pb-8 space-y-2">
                 <h3 className="px-4 text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-4 opacity-50">Main Menu</h3>
                 {navItems.map((item) => (
                     <Link

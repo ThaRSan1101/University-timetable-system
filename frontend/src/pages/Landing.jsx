@@ -5,6 +5,7 @@ import uwuLogo from '../assets/uwu.png';
 import studentsImg from '../assets/students.jpg';
 import lecturerImg from '../assets/lecturer.jpg';
 import uwuHero from '../assets/uwu_hero.jpg';
+import register2 from '../assets/regiter2.jpg';
 
 const Landing = () => {
     const { user, loading } = useAuth();
@@ -17,8 +18,8 @@ const Landing = () => {
     return (
 
         <div className="min-h-screen bg-gray-50 font-sans">
-            {/* Header - White Theme */}
-            <header className="bg-white text-gray-900 shadow-sm sticky top-0 z-50">
+            {/* Header - Transparent Glass Theme */}
+            <header className="bg-white/70 backdrop-blur-md text-gray-900 shadow-sm sticky top-0 z-50">
                 <nav className="w-full px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-1">
@@ -27,18 +28,24 @@ const Landing = () => {
                     </Link>
 
 
+                    {/* Navigation Links */}
+                    <div className="hidden md:flex items-center gap-8">
+                        <a href="#about" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">About</a>
+                        <a href="#features" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">Features</a>
+                        <a href="#mission" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">Our Mission</a>
+                    </div>
 
                     {/* Auth Buttons */}
-                    <div className="hidden md:flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-3">
                         <Link
                             to="/register"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 text-base font-bold px-8 py-3 rounded-full transition shadow-md flex items-center gap-2"
+                            className="text-blue-900 hover:bg-blue-50 text-base font-semibold px-6 py-2.5 rounded-lg transition"
                         >
                             Sign Up
                         </Link>
                         <Link
                             to="/login"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 text-base font-bold px-8 py-3 rounded-full transition shadow-md flex items-center gap-2"
+                            className="bg-blue-900 hover:bg-blue-800 text-white text-base font-semibold px-8 py-2.5 rounded-lg transition shadow-sm"
                         >
                             Login
                         </Link>
@@ -105,59 +112,14 @@ const Landing = () => {
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="bg-white py-12 border-y">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">4</div>
-                            <div className="text-sm text-gray-600">Faculties</div>
-                        </div>
 
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">50+</div>
-                            <div className="text-sm text-gray-600">Lecture Halls</div>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">100%</div>
-                            <div className="text-sm text-gray-600">Conflict-Free</div>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">24/7</div>
-                            <div className="text-sm text-gray-600">Access</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             {/* Why Use Section */}
             <section className="py-20 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                            Why use the UWU Timetable System?
+                            Why use the Scheduling System
                         </h2>
                         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                             Designed specifically for Uva Wellassa University, integrating academic structure, simplifying the complexity of modern timetabling.
@@ -202,6 +164,81 @@ const Landing = () => {
                             <p className="text-gray-600 leading-relaxed">
                                 Last-minute changes? No problem. Instant notifications ensure lecturers and students are always aware of revised timetables, no confusion.
                             </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Our Mission Section - Flipped Layout */}
+            <section className="relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row min-h-[550px]">
+                    {/* Left Panel: Theme Light Blue (Compact) */}
+                    <div className="lg:w-[45%] bg-blue-50/40 p-12 lg:pl-20 lg:pr-20 flex flex-col justify-center relative">
+                        <div className="flex flex-col gap-6 max-w-xl">
+                            {/* Card 1 */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-6 hover:shadow-md transition-shadow">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-blue-50 flex items-center justify-center text-blue-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">Academic Quality</h4>
+                                    <p className="text-sm text-gray-500 leading-relaxed">
+                                        Optimizing lecture distribution to ensure students maintain a healthy learning pace and faculty output.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Card 2 (Featured Yellow) */}
+                            <div className="bg-yellow-400 p-6 rounded-2xl shadow-xl flex items-center gap-6 transform hover:scale-[1.01] transition-transform">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-white/20 flex items-center justify-center text-slate-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-slate-950 mb-1">Resource Efficiency</h4>
+                                    <p className="text-sm text-slate-900/80 leading-relaxed font-medium">
+                                        Intelligent mapping of university facilities for maximum capacity and resource utilization.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Card 3 */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-6 hover:shadow-md transition-shadow">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-blue-50 flex items-center justify-center text-blue-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 019-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">Unified Coordination</h4>
+                                    <p className="text-sm text-gray-500 leading-relaxed">
+                                        Bringing administrative decision-making, lecturer availability, and student needs together.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel: University Blue (Dominant) with Background Image */}
+                    <div className="lg:w-[55%] p-12 lg:pl-24 lg:pr-20 flex flex-col justify-center relative overflow-hidden">
+                        {/* Background Image with Overlay */}
+                        <div
+                            className="absolute inset-0 bg-cover z-0"
+                            style={{ backgroundImage: `url(${register2})`, backgroundPosition: 'center 35%' }}
+                        >
+                            <div className="absolute inset-0 bg-blue-900/90 backdrop-blur-[2px]"></div>
+                        </div>
+
+
+                        <div className="relative z-10 lg:text-left">
+                            <span className="text-blue-300 text-xs font-bold uppercase tracking-[0.3em] mb-4 block">Our Commitment</span>
+                            <h2 className="text-5xl lg:text-7xl font-bold mb-8 leading-none">
+                                <span className="text-white">Our </span>
+                                <span className="text-yellow-400 italic">Mission</span>
+                            </h2>
+
+                            <div className="flex justify-start">
+                                <p className="text-blue-50/80 text-lg leading-relaxed mb-6 max-w-md">
+                                    To empower Uva Wellassa University with a cutting-edge scheduling ecosystem, fostering academic excellence through intelligent resource management and seamless coordination.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
