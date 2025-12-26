@@ -46,10 +46,10 @@ const AdminSidebar = () => {
     return (
         <aside className="w-72 bg-gradient-to-b from-blue-900 to-blue-950 text-white fixed left-0 top-0 h-screen flex flex-col z-20 shadow-2xl">
             {/* Logo Section */}
-            <div className="p-8 pb-4 flex items-center gap-3">
+            <div className="pl-2 pr-4 py-8 pb-4 flex items-center gap-3">
                 <img src={uwuLogo} alt="UWU Logo" className="w-16 h-16 object-contain" />
                 <div>
-                    <span className="text-xl font-extrabold tracking-tight">UWU Sched</span>
+                    <span className="text-base font-bold tracking-wide whitespace-nowrap">Uva Wellassa University</span>
                     <p className="text-[10px] text-blue-300 font-bold uppercase tracking-[0.2em]">Admin Console</p>
                 </div>
             </div>

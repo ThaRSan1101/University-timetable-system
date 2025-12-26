@@ -115,6 +115,11 @@ const StudentDashboard = () => {
         return ((endHours * 60 + (endMinutes || 0)) - (startHours * 60 + (startMinutes || 0))) / 60;
     };
 
+    const formatTime = (time) => {
+        if (!time) return '';
+        return time.slice(0, 5);
+    };
+
     const getNextClass = () => {
         const now = new Date();
         const currentDay = days[now.getDay() - 1];
@@ -342,7 +347,7 @@ const StudentDashboard = () => {
                                                                     Room {slot.classroom_details.room_number}
                                                                 </div>
                                                                 <div className="text-xs opacity-75">
-                                                                    {slot.start_time} - {slot.end_time}
+                                                                    {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                                                 </div>
                                                             </div>
                                                         );
@@ -356,7 +361,6 @@ const StudentDashboard = () => {
                                 <div className="space-y-4">
                                     {days.map(day => {
                                         const classes = getDayClasses(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
-                                        if (classes.length === 0) return null;
 
                                         return (
                                             <div key={day} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -364,27 +368,33 @@ const StudentDashboard = () => {
                                                     <h3 className="text-lg font-bold text-gray-900">{day}</h3>
                                                 </div>
                                                 <div className="divide-y divide-gray-100">
-                                                    {classes.map(slot => (
-                                                        <div key={slot.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center gap-6">
-                                                            <div className="w-24 flex-shrink-0">
-                                                                <p className="text-lg font-bold text-blue-900">{slot.start_time}</p>
-                                                                <p className="text-sm text-gray-500">to {slot.end_time}</p>
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <h4 className="text-md font-bold text-gray-900 mb-1">{slot.subject_details.name}</h4>
-                                                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                                                    <span className="flex items-center gap-1">
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                                                        {slot.subject_details.lecturer_name}
-                                                                    </span>
-                                                                    <span className="flex items-center gap-1">
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
-                                                                        Room {slot.classroom_details.room_number}
-                                                                    </span>
+                                                    {classes.length > 0 ? (
+                                                        classes.map(slot => (
+                                                            <div key={slot.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center gap-6">
+                                                                <div className="w-24 flex-shrink-0">
+                                                                    <p className="text-lg font-bold text-blue-900">{formatTime(slot.start_time)}</p>
+                                                                    <p className="text-sm text-gray-500">to {formatTime(slot.end_time)}</p>
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <h4 className="text-md font-bold text-gray-900 mb-1">{slot.subject_details.name}</h4>
+                                                                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                                        <span className="flex items-center gap-1">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                                            {slot.subject_details.lecturer_name}
+                                                                        </span>
+                                                                        <span className="flex items-center gap-1">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
+                                                                            Room {slot.classroom_details.room_number}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-6 text-center text-gray-400 font-medium italic">
+                                                            No sessions scheduled for {day}
                                                         </div>
-                                                    ))}
+                                                    )}
                                                 </div>
                                             </div>
                                         );
