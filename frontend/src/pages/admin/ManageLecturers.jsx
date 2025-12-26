@@ -127,7 +127,7 @@ const ManageLecturers = () => {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <AdminSidebar />
 
-            <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+            <div className="flex-1 ml-72 p-8 overflow-y-auto h-screen">
                 {/* Header */}
                 <div className="mb-8">
                     <nav className="flex text-sm text-gray-500 mb-2">
@@ -170,8 +170,8 @@ const ManageLecturers = () => {
                                     key={dept}
                                     onClick={() => setActiveFilter(dept)}
                                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeFilter === dept
-                                            ? 'bg-gray-900 text-white'
-                                            : 'text-gray-600 hover:bg-gray-100'
+                                        ? 'bg-gray-900 text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
                                         }`}
                                 >
                                     {dept === 'Computer Science' ? 'Comp. Sci.' : dept}
@@ -363,8 +363,8 @@ const ManageLecturers = () => {
                                                             key={`${day}-${slot}`}
                                                             onClick={() => toggleAvailability(day, slot)}
                                                             className={`h-10 rounded-lg transition-all duration-200 flex items-center justify-center ${isAvail
-                                                                    ? 'bg-blue-100 text-blue-600 border border-blue-200'
-                                                                    : 'bg-gray-50 text-gray-300 border border-transparent'
+                                                                ? 'bg-blue-100 text-blue-600 border border-blue-200'
+                                                                : 'bg-gray-50 text-gray-300 border border-transparent'
                                                                 }`}
                                                         >
                                                             {isAvail && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}

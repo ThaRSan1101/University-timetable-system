@@ -36,7 +36,7 @@ const Grades = () => {
         }
     ]);
 
-    // Mock data for recent grades
+    // Mock data for recent assessments
     const [recentGrades, setRecentGrades] = useState([
         {
             id: 1,
@@ -72,35 +72,35 @@ const Grades = () => {
             <Sidebar />
 
             {/* Main Content */}
-            <div className="flex-1 ml-64 overflow-auto">
+            <div className="flex-1 ml-72 overflow-auto">
                 <div className="p-8">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Grades & Assessments</h1>
-                        <p className="text-gray-600">Track your academic performance and upcoming deadlines</p>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Assessments</h1>
+                        <p className="text-gray-600">Track your academic assessments and upcoming deadlines</p>
                     </div>
 
                     {/* Stats Overview */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 uppercase">GPA So Far</p>
-                                <p className="text-3xl font-bold text-gray-900 mt-1">3.8</p>
+                                <p className="text-sm font-semibold text-gray-500 uppercase">Completed Assessments</p>
+                                <p className="text-3xl font-bold text-gray-900 mt-1">12</p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                         </div>
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 uppercase">Credits Earned</p>
-                                <p className="text-3xl font-bold text-gray-900 mt-1">15/18</p>
+                                <p className="text-sm font-semibold text-gray-500 uppercase">Canceled Assessments</p>
+                                <p className="text-3xl font-bold text-gray-900 mt-1">2</p>
                             </div>
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                         </div>
@@ -125,7 +125,7 @@ const Grades = () => {
                                     <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
                                     Upcoming Work
                                 </h2>
-                                <button className="text-blue-600 hover:text-blue-700 font-medium">View All</button>
+                                <button className="text-blue-900 hover:text-black font-bold hover:underline">View All</button>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -155,12 +155,6 @@ const Grades = () => {
                                             <div className="text-xs text-gray-400 font-medium">
                                                 Due: <span className="text-gray-600">{new Date(item.dueDate).toLocaleDateString()}</span>
                                             </div>
-                                            <button className="text-blue-600 hover:text-blue-800 text-sm font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
-                                                Details
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
                                         </div>
                                     </div>
                                 ))}

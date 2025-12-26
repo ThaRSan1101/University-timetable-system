@@ -93,7 +93,7 @@ const ManageClassrooms = () => {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <AdminSidebar />
 
-            <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+            <div className="flex-1 ml-72 p-8 overflow-y-auto h-screen">
                 {/* Header Section */}
                 <div className="mb-8">
                     <nav className="flex text-sm text-gray-500 mb-2">

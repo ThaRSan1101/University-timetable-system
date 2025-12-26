@@ -56,7 +56,7 @@ const ManageCourses = () => {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <AdminSidebar />
 
-            <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+            <div className="flex-1 ml-72 p-8 overflow-y-auto h-screen">
                 {/* Top Header */}
                 <div className="flex justify-between items-end mb-8">
                     <div>
