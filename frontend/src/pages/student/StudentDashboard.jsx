@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
@@ -8,20 +10,85 @@ const StudentDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
     const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
-    const [selectedDepartments, setSelectedDepartments] = useState(['Computer Science', 'Mathematics']);
+
+    const dummyTimetable = [
+        {
+            id: 1,
+            day: 'Monday',
+            start_time: '09:00',
+            end_time: '11:00',
+            subject_details: { name: 'Advanced Algorithms', lecturer_name: 'Dr. Aruna Perera' },
+            classroom_details: { room_number: 'Lab 01' }
+        },
+        {
+            id: 2,
+            day: 'Monday',
+            start_time: '13:00',
+            end_time: '15:00',
+            subject_details: { name: 'Database Systems', lecturer_name: 'Prof. Kamal Silva' },
+            classroom_details: { room_number: 'Hall A' }
+        },
+        {
+            id: 3,
+            day: 'Tuesday',
+            start_time: '10:00',
+            end_time: '12:00',
+            subject_details: { name: 'Machine Learning', lecturer_name: 'Dr. Sarah Smith' },
+            classroom_details: { room_number: 'Room 304' }
+        },
+        {
+            id: 4,
+            day: 'Wednesday',
+            start_time: '09:00',
+            end_time: '11:00',
+            subject_details: { name: 'Software Engineering', lecturer_name: 'Mr. John Doe' },
+            classroom_details: { room_number: 'Web Lab' }
+        },
+        {
+            id: 5,
+            day: 'Thursday',
+            start_time: '14:00',
+            end_time: '16:00',
+            subject_details: { name: 'Computer Networks', lecturer_name: 'Dr. Saman Kumara' },
+            classroom_details: { room_number: 'Hall B' }
+        },
+        {
+            id: 6,
+            day: 'Friday',
+            start_time: '11:00',
+            end_time: '13:00',
+            subject_details: { name: 'Mobile Computing', lecturer_name: 'Ms. Janaki Liyanage' },
+            classroom_details: { room_number: 'Lab 02' }
+        }
+    ];
 
     useEffect(() => {
         const fetchTimetable = async () => {
             try {
-                const profileRes = await api.get(`students/?user=${user.id}`);
-                if (profileRes.data.length > 0) {
-                    const studentProfile = profileRes.data[0];
+                // Use profile from user context if available, otherwise fetch it
+                let studentProfile = user.student_profile;
+
+                if (!studentProfile) {
+                    const profileRes = await api.get(`students/?user=${user.id}`);
+                    if (profileRes.data.length > 0) {
+                        studentProfile = profileRes.data[0];
+                    }
+                }
+
+                if (studentProfile) {
                     setProfile(studentProfile);
                     const response = await api.get(`timetable/?course_id=${studentProfile.course}&year=${studentProfile.year}&semester=${studentProfile.semester}`);
-                    setTimetable(response.data);
+                    if (response.data && response.data.length > 0) {
+                        setTimetable(response.data);
+                    } else {
+                        setTimetable(dummyTimetable);
+                    }
+                } else {
+                    setTimetable(dummyTimetable);
                 }
             } catch (error) {
-                console.error("Error fetching timetable", error);
+                console.error("Error fetching timetable, using dummy data", error);
+                setTimetable(dummyTimetable);
             } finally {
                 setLoading(false);
             }
@@ -39,26 +106,34 @@ const StudentDashboard = () => {
     const getClassPosition = (startTime) => {
         const [hours, minutes] = startTime.split(':').map(Number);
         const startHour = 9;
-        return ((hours - startHour) * 60 + minutes) / 60;
+        return ((hours - startHour) * 60 + (minutes || 0)) / 60;
     };
 
     const getClassDuration = (startTime, endTime) => {
         const [startHours, startMinutes] = startTime.split(':').map(Number);
         const [endHours, endMinutes] = endTime.split(':').map(Number);
-        return ((endHours * 60 + endMinutes) - (startHours * 60 + startMinutes)) / 60;
+        return ((endHours * 60 + (endMinutes || 0)) - (startHours * 60 + (startMinutes || 0))) / 60;
+    };
+
+    const formatTime = (time) => {
+        if (!time) return '';
+        return time.slice(0, 5);
     };
 
     const getNextClass = () => {
         const now = new Date();
         const currentDay = days[now.getDay() - 1];
-        const currentTime = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
         const todayClasses = getDayClasses(currentDay);
-        const upcoming = todayClasses.find(slot => slot.start_time > currentTime);
+        const upcoming = todayClasses
+            .filter(slot => slot.start_time > currentTime)
+            .sort((a, b) => a.start_time.localeCompare(b.start_time))[0];
 
         if (upcoming) {
-            const timeDiff = new Date(`2000-01-01 ${upcoming.start_time}`) - new Date(`2000-01-01 ${currentTime}`);
-            const minutes = Math.floor(timeDiff / 60000);
+            const [uH, uM] = upcoming.start_time.split(':').map(Number);
+            const [cH, cM] = currentTime.split(':').map(Number);
+            const minutes = (uH * 60 + uM) - (cH * 60 + cM);
             return { ...upcoming, minutesUntil: minutes };
         }
         return null;
@@ -80,11 +155,23 @@ const StudentDashboard = () => {
 
     const nextClass = getNextClass();
 
+    const handleExport = () => {
+        const content = "Timetable Data\n" + timetable.map(t => `${t.day}: ${t.start_time}-${t.end_time} ${t.subject_details.name}`).join("\n");
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'timetable.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mx-auto mb-4"></div>
                     <p className="text-gray-600 text-lg">Loading your timetable...</p>
                 </div>
             </div>
@@ -93,66 +180,9 @@ const StudentDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <div className="w-64 bg-white border-r border-gray-200 p-6 fixed left-0 top-0 h-screen overflow-y-auto">
-                {/* Logo */}
-                <div className="flex items-center gap-2 mb-8">
-                    <div className="bg-blue-600 rounded-lg p-2">
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-                        </svg>
-                    </div>
-                    <span className="text-xl font-bold text-gray-900">UniPortal</span>
-                </div>
+            <Sidebar />
 
-                {/* Navigation */}
-                <div className="space-y-1 mb-8">
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Academic</h3>
-                    <a href="#" className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Timetable
-                    </a>
-                    <a href="#" className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        Courses
-                    </a>
-                    <a href="#" className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                        </svg>
-                        Grades
-                    </a>
-                    <a href="/profile" className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Profile
-                    </a>
-                </div>
-
-                {/* Logout Button */}
-                <div className="absolute bottom-6 left-6 right-6">
-                    <button
-                        onClick={() => {
-                            localStorage.removeItem('token');
-                            window.location.href = '/login';
-                        }}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Logout
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 overflow-auto ml-64">
+            <div className="flex-1 overflow-auto ml-72">
                 <div className="p-8">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
@@ -166,7 +196,10 @@ const StudentDashboard = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-900 text-white rounded-lg font-medium transition-all shadow-md active:scale-95"
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
@@ -186,26 +219,24 @@ const StudentDashboard = () => {
                                         </svg>
                                         Filters
                                     </div>
-                                    <button className="text-blue-600 text-sm font-medium">Reset</button>
+                                    <button className="text-blue-900 text-sm font-bold hover:underline">Reset</button>
                                 </div>
 
-                                {/* Semester Filter */}
                                 <div className="mb-6">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">SEMESTER</label>
-                                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                        <option>Fall 2024</option>
-                                        <option>Spring 2024</option>
+                                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none">
+                                        <option>First Semester</option>
+                                        <option>Second Semester</option>
                                     </select>
                                 </div>
 
-                                {/* View Mode */}
                                 <div className="mb-6">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">VIEW MODE</label>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setViewMode('calendar')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium ${viewMode === 'calendar'
-                                                ? 'bg-blue-600 text-white'
+                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'calendar'
+                                                ? 'bg-blue-900 text-white shadow-lg'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                         >
@@ -216,8 +247,8 @@ const StudentDashboard = () => {
                                         </button>
                                         <button
                                             onClick={() => setViewMode('list')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium ${viewMode === 'list'
-                                                ? 'bg-blue-600 text-white'
+                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'list'
+                                                ? 'bg-blue-900 text-white shadow-lg'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                         >
@@ -229,9 +260,8 @@ const StudentDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Search Course */}
                                 <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">FIND COURSE</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">FIND MODULE</label>
                                     <div className="relative">
                                         <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -239,100 +269,149 @@ const StudentDashboard = () => {
                                         <input
                                             type="text"
                                             placeholder="e.g. CS101"
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Next Class Card */}
                             {nextClass && (
-                                <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 mt-6">
-                                    <div className="flex items-center gap-2 text-blue-600 font-semibold mb-3">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Next Class
+                                <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group mt-6">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
                                     </div>
-                                    <div className="bg-white rounded-lg p-4">
-                                        <p className="text-sm text-gray-500 mb-1">In {nextClass.minutesUntil} mins</p>
-                                        <p className="font-bold text-gray-900 mb-1">{nextClass.subject_details.name}</p>
-                                        <p className="text-sm text-gray-600">Room {nextClass.classroom_details.room_number} • {nextClass.subject_details.lecturer_name}</p>
+                                    <div className="relative z-10">
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-blue-300 mb-4 flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                                            Current Status
+                                        </p>
+                                        <p className="text-sm font-medium text-blue-100 mb-1">Up Next in {nextClass.minutesUntil} mins</p>
+                                        <h4 className="text-xl font-bold mb-4 leading-tight">{nextClass.subject_details.name}</h4>
+                                        <div className="flex items-center gap-3 text-xs font-semibold bg-white/10 p-3 rounded-xl border border-white/10">
+                                            <div className="flex flex-col">
+                                                <span className="text-blue-300 uppercase text-[9px]">Venue</span>
+                                                <span>Room {nextClass.classroom_details.room_number}</span>
+                                            </div>
+                                            <div className="w-[1px] h-8 bg-white/10 mx-1"></div>
+                                            <div className="flex flex-col overflow-hidden">
+                                                <span className="text-blue-300 uppercase text-[9px]">Lecturer</span>
+                                                <span className="truncate">{nextClass.subject_details.lecturer_name}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Calendar View */}
                         <div className="lg:col-span-3">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                {/* Week Days Header */}
-                                <div className="grid grid-cols-6 border-b border-gray-200">
-                                    <div className="p-4 bg-gray-50"></div>
-                                    {days.map((day, index) => {
-                                        const date = new Date();
-                                        date.setDate(date.getDate() - date.getDay() + index + 1);
-                                        const isToday = date.toDateString() === new Date().toDateString();
+                            {viewMode === 'calendar' ? (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div className="grid grid-cols-6 border-b border-gray-200">
+                                        <div className="p-4 bg-gray-50"></div>
+                                        {days.map((day, index) => {
+                                            const date = new Date();
+                                            date.setDate(date.getDate() - date.getDay() + index + 1);
+                                            const isToday = date.toDateString() === new Date().toDateString();
+
+                                            return (
+                                                <div key={day} className="p-4 text-center border-l border-gray-200">
+                                                    <div className="text-xs text-gray-500 uppercase mb-1">{day.substring(0, 3)}</div>
+                                                    <div className={`text-2xl font-bold ${isToday ? 'bg-blue-900 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}>
+                                                        {date.getDate()}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="grid grid-cols-6">
+                                            <div className="border-r border-gray-200">
+                                                {timeSlots.map(time => (
+                                                    <div key={time} className="h-20 border-b border-gray-100 px-3 py-2 text-xs text-gray-500">
+                                                        {time}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {days.map(day => (
+                                                <div key={day} className="relative border-l border-gray-200">
+                                                    {timeSlots.map(time => (
+                                                        <div key={time} className="h-20 border-b border-gray-100"></div>
+                                                    ))}
+
+                                                    {getDayClasses(day).map(slot => {
+                                                        const top = getClassPosition(slot.start_time) * 80;
+                                                        const height = getClassDuration(slot.start_time, slot.end_time) * 80;
+                                                        const colorClass = getColorForSubject(slot.subject_details.name);
+
+                                                        return (
+                                                            <div
+                                                                key={slot.id}
+                                                                className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+                                                                style={{ top: `${top}px`, height: `${height}px` }}
+                                                            >
+                                                                <div className="text-xs font-bold mb-1 truncate">
+                                                                    {slot.subject_details.name}
+                                                                </div>
+                                                                <div className="text-xs opacity-90 mb-1">
+                                                                    Room {slot.classroom_details.room_number}
+                                                                </div>
+                                                                <div className="text-xs opacity-75">
+                                                                    {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {days.map(day => {
+                                        const classes = getDayClasses(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
                                         return (
-                                            <div key={day} className="p-4 text-center border-l border-gray-200">
-                                                <div className="text-xs text-gray-500 uppercase mb-1">{day.substring(0, 3)}</div>
-                                                <div className={`text-2xl font-bold ${isToday ? 'bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}>
-                                                    {date.getDate()}
+                                            <div key={day} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                                                    <h3 className="text-lg font-bold text-gray-900">{day}</h3>
+                                                </div>
+                                                <div className="divide-y divide-gray-100">
+                                                    {classes.length > 0 ? (
+                                                        classes.map(slot => (
+                                                            <div key={slot.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center gap-6">
+                                                                <div className="w-24 flex-shrink-0">
+                                                                    <p className="text-lg font-bold text-blue-900">{formatTime(slot.start_time)}</p>
+                                                                    <p className="text-sm text-gray-500">to {formatTime(slot.end_time)}</p>
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <h4 className="text-md font-bold text-gray-900 mb-1">{slot.subject_details.name}</h4>
+                                                                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                                        <span className="flex items-center gap-1">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                                            {slot.subject_details.lecturer_name}
+                                                                        </span>
+                                                                        <span className="flex items-center gap-1">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
+                                                                            Room {slot.classroom_details.room_number}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-6 text-center text-gray-400 font-medium italic">
+                                                            No sessions scheduled for {day}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
-
-                                {/* Time Grid */}
-                                <div className="relative">
-                                    <div className="grid grid-cols-6">
-                                        {/* Time Column */}
-                                        <div className="border-r border-gray-200">
-                                            {timeSlots.map(time => (
-                                                <div key={time} className="h-20 border-b border-gray-100 px-3 py-2 text-xs text-gray-500">
-                                                    {time}
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Days Columns */}
-                                        {days.map(day => (
-                                            <div key={day} className="relative border-l border-gray-200">
-                                                {timeSlots.map(time => (
-                                                    <div key={time} className="h-20 border-b border-gray-100"></div>
-                                                ))}
-
-                                                {/* Classes */}
-                                                {getDayClasses(day).map(slot => {
-                                                    const top = getClassPosition(slot.start_time) * 80; // 80px per hour
-                                                    const height = getClassDuration(slot.start_time, slot.end_time) * 80;
-                                                    const colorClass = getColorForSubject(slot.subject_details.name);
-
-                                                    return (
-                                                        <div
-                                                            key={slot.id}
-                                                            className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
-                                                            style={{ top: `${top}px`, height: `${height}px` }}
-                                                        >
-                                                            <div className="text-xs font-bold mb-1 truncate">
-                                                                {slot.subject_details.name}
-                                                            </div>
-                                                            <div className="text-xs opacity-90 mb-1">
-                                                                Room {slot.classroom_details.room_number}
-                                                            </div>
-                                                            <div className="text-xs opacity-75">
-                                                                {slot.start_time} - {slot.end_time}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>

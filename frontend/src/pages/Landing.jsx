@@ -4,6 +4,8 @@ import { useState } from 'react';
 import uwuLogo from '../assets/uwu.png';
 import studentsImg from '../assets/students.jpg';
 import lecturerImg from '../assets/lecturer.jpg';
+import uwuHero from '../assets/uwu_hero.jpg';
+import register2 from '../assets/regiter2.jpg';
 
 const Landing = () => {
     const { user, loading } = useAuth();
@@ -11,36 +13,40 @@ const Landing = () => {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
-    // If already logged in, redirect to dashboard
-    if (user) {
-        return <Navigate to="/dashboard" replace />;
-    }
+
 
     return (
 
-        <div className="min-h-screen bg-gray-50 font-sans">
-            {/* Header - White Theme */}
-            <header className="bg-white text-gray-900 shadow-sm sticky top-0 z-50">
+        <div className="min-h-screen bg-gray-50 font-sans scroll-smooth">
+            {/* Header - Transparent Glass Theme */}
+            <header className="bg-white/70 backdrop-blur-md text-gray-900 shadow-sm sticky top-0 z-50">
                 <nav className="w-full px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-                    {/* Logo */}
-                    <div className="flex items-center gap-1">
-                        <img src={uwuLogo} alt="UWU Logo" className="w-20 h-20 object-contain" />
-                        <span className="text-lg font-serif font-semibold tracking-wide text-blue-900">Uva Wellassa University</span>
+                    {/* Logo Section */}
+                    <div className="flex-1">
+                        <Link to="/" className="flex items-center gap-0">
+                            <img src={uwuLogo} alt="UWU Logo" className="w-20 h-20 object-contain" />
+                            <span className="text-3xl font-serif font-semibold tracking-wide text-blue-900 leading-none mt-1 -ml-2">UWU</span>
+                        </Link>
                     </div>
 
+                    {/* Navigation Links - Centered */}
+                    <div className="hidden md:flex items-center justify-center gap-8 flex-none">
+                        <a href="#about" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">About</a>
+                        <a href="#features" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">Features</a>
+                        <a href="#mission" className="text-gray-700 hover:text-blue-900 font-medium transition-colors">Our Mission</a>
+                    </div>
 
-
-                    {/* Auth Buttons */}
-                    <div className="hidden md:flex items-center gap-4">
+                    {/* Auth Buttons Section */}
+                    <div className="flex-1 hidden md:flex items-center justify-end gap-3">
                         <Link
                             to="/register"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 text-base font-bold px-8 py-3 rounded-full transition shadow-md flex items-center gap-2"
+                            className="text-blue-900 hover:bg-blue-50 text-base font-semibold px-6 py-2.5 rounded-lg transition"
                         >
                             Sign Up
                         </Link>
                         <Link
                             to="/login"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 text-base font-bold px-8 py-3 rounded-full transition shadow-md flex items-center gap-2"
+                            className="bg-blue-900 hover:bg-blue-800 text-white text-base font-semibold px-8 py-2.5 rounded-lg transition shadow-sm"
                         >
                             Login
                         </Link>
@@ -71,8 +77,8 @@ const Landing = () => {
                 {/* Background Image */}
                 <div className="absolute inset-0">
                     <img
-                        src="https://images.unsplash.com/photo-1562774053-701939374585?w=1920&q=80&fit=crop"
-                        alt="University Students"
+                        src={uwuHero}
+                        alt="Uva Wellassa University"
                         className="w-full h-full object-cover object-center"
                     />
                     {/* Gradient Overlay - Blue Theme */}
@@ -84,14 +90,12 @@ const Landing = () => {
                     <div className="max-w-2xl text-white pt-4">
 
 
-                        <h1 className="text-4xl lg:text-5xl font-serif font-medium leading-tight mb-4 text-white drop-shadow-md">
-                            Intelligent Scheduling for the Future.
-                            <br />
-                            <span className="text-yellow-400 italic">Become the master of your time.</span>
+                        <h1 className="text-4xl lg:text-6xl font-serif font-bold leading-tight mb-6 text-white drop-shadow-md">
+                            Precision Scheduling for Academic Excellence.
                         </h1>
 
-                        <p className="text-lg text-blue-50 mb-8 leading-relaxed font-light max-w-lg">
-                            Seamlessly generate conflict-free timetables, manage lecture hall resources, and access real-time schedule updates—all in one centralized official platform.
+                        <p className="text-xl text-blue-50 mb-10 leading-relaxed font-light max-w-xl">
+                            UWU streamlines university timetables, resource management, and real-time updates—all in one centralized official platform.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -107,59 +111,14 @@ const Landing = () => {
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="bg-white py-12 border-y">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">4</div>
-                            <div className="text-sm text-gray-600">Faculties</div>
-                        </div>
 
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">50+</div>
-                            <div className="text-sm text-gray-600">Lecture Halls</div>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">100%</div>
-                            <div className="text-sm text-gray-600">Conflict-Free</div>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="text-3xl font-bold text-gray-900 mb-1">24/7</div>
-                            <div className="text-sm text-gray-600">Access</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             {/* Why Use Section */}
-            <section className="py-20 bg-gray-50">
+            <section id="about" className="py-20 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                            Why use the UWU Timetable System?
+                            Why use the Scheduling System
                         </h2>
                         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                             Designed specifically for Uva Wellassa University, integrating academic structure, simplifying the complexity of modern timetabling.
@@ -209,8 +168,83 @@ const Landing = () => {
                 </div>
             </section>
 
+            {/* Our Mission Section - Flipped Layout */}
+            <section id="mission" className="relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row min-h-[550px]">
+                    {/* Left Panel: Theme Light Blue (Compact) */}
+                    <div className="lg:w-[45%] bg-blue-50/40 p-12 lg:pl-20 lg:pr-20 flex flex-col justify-center relative">
+                        <div className="flex flex-col gap-6 max-w-xl">
+                            {/* Card 1 */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-6 hover:shadow-md transition-shadow">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-blue-50 flex items-center justify-center text-blue-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">Academic Quality</h4>
+                                    <p className="text-sm text-gray-500 leading-relaxed">
+                                        Optimizing lecture distribution to ensure students maintain a healthy learning pace and faculty output.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Card 2 (Featured Yellow) */}
+                            <div className="bg-yellow-400 p-6 rounded-2xl shadow-xl flex items-center gap-6 transform hover:scale-[1.01] transition-transform">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-white/20 flex items-center justify-center text-slate-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-slate-950 mb-1">Resource Efficiency</h4>
+                                    <p className="text-sm text-slate-900/80 leading-relaxed font-medium">
+                                        Intelligent mapping of university facilities for maximum capacity and resource utilization.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Card 3 */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-6 hover:shadow-md transition-shadow">
+                                <div className="w-14 h-14 shrink-0 rounded-xl bg-blue-50 flex items-center justify-center text-blue-900">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 019-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">Unified Coordination</h4>
+                                    <p className="text-sm text-gray-500 leading-relaxed">
+                                        Bringing administrative decision-making, lecturer availability, and student needs together.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel: University Blue (Dominant) with Background Image */}
+                    <div className="lg:w-[55%] p-12 lg:pl-24 lg:pr-20 flex flex-col justify-center relative overflow-hidden">
+                        {/* Background Image with Overlay */}
+                        <div
+                            className="absolute inset-0 bg-cover z-0"
+                            style={{ backgroundImage: `url(${register2})`, backgroundPosition: 'center 35%' }}
+                        >
+                            <div className="absolute inset-0 bg-blue-900/90 backdrop-blur-[2px]"></div>
+                        </div>
+
+
+                        <div className="relative z-10 lg:text-left">
+                            <span className="text-blue-300 text-xs font-bold uppercase tracking-[0.3em] mb-4 block">Our Commitment</span>
+                            <h2 className="text-5xl lg:text-7xl font-bold mb-8 leading-none">
+                                <span className="text-white">Our </span>
+                                <span className="text-yellow-400 italic">Mission</span>
+                            </h2>
+
+                            <div className="flex justify-start">
+                                <p className="text-blue-50/80 text-lg leading-relaxed mb-6 max-w-md">
+                                    To empower Uva Wellassa University with a cutting-edge scheduling ecosystem, fostering academic excellence through intelligent resource management and seamless coordination.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Tailored for Everyone Section */}
-            <section className="py-20 bg-white">
+            <section id="features" className="py-20 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
@@ -243,12 +277,6 @@ const Landing = () => {
                                 <p className="text-gray-600 mb-4">
                                     Access your personal timetable anytime, anywhere. Filter by course, view weekly schedules, and never miss a lecture.
                                 </p>
-                                <button className="text-blue-900 font-semibold flex items-center gap-2 hover:gap-3 transition-all">
-                                    View Student Guide
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
                             </div>
                         </div>
 
@@ -273,12 +301,6 @@ const Landing = () => {
                                 <p className="text-gray-600 mb-4">
                                     Manage your teaching load, request classroom changes, view student attendance, and plan your semester with confidence.
                                 </p>
-                                <button className="text-blue-900 font-semibold flex items-center gap-2 hover:gap-3 transition-all">
-                                    Lecturer Portal
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
                             </div>
                         </div>
 
@@ -304,12 +326,6 @@ const Landing = () => {
                                 <p className="text-gray-600 mb-4">
                                     Centralize control, create schedules, resolve conflicts, manage resources, and oversee the entire timetabling process.
                                 </p>
-                                <button className="text-blue-900 font-semibold flex items-center gap-2 hover:gap-3 transition-all">
-                                    Admin Dashboard
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -332,7 +348,6 @@ const Landing = () => {
                         >
                             Get Started
                         </Link>
-
                     </div>
                 </div>
             </section>
@@ -343,10 +358,10 @@ const Landing = () => {
                     <div className="flex flex-col lg:flex-row justify-between gap-12 mb-12">
                         {/* Left Side: Brand, Desc, Socials */}
                         <div className="max-w-sm">
-                            <div className="flex items-center gap-1 mb-4">
+                            <Link to="/" className="flex items-center gap-0 mb-4">
                                 <img src={uwuLogo} alt="UWU Logo" className="w-20 h-20 object-contain" />
-                                <span className="text-lg font-semibold text-gray-900">Uva Wellassa University</span>
-                            </div>
+                                <span className="text-2xl font-semibold text-gray-900 -ml-2">UWU</span>
+                            </Link>
                             <p className="text-sm text-gray-600 mb-6">
                                 The Uva Wellassa System is an innovative timetabling solution designed to enhance technology and student experience.
                             </p>
@@ -391,7 +406,7 @@ const Landing = () => {
                     </div>
 
                     <div className="border-t border-gray-200 pt-8 flex justify-between items-center text-sm text-gray-500">
-                        <p>© {new Date().getFullYear()} Uva Wellassa University. All rights reserved.</p>
+                        <p>© {new Date().getFullYear()} UWU. All rights reserved.</p>
                         <div className="flex gap-6">
                             <a href="#" className="hover:text-gray-900">Privacy Policy</a>
                             <a href="#" className="hover:text-gray-900">Terms of Service</a>

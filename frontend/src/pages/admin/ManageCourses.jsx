@@ -56,22 +56,12 @@ const ManageCourses = () => {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <AdminSidebar />
 
-            <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+            <div className="flex-1 ml-72 p-8 overflow-y-auto h-screen">
                 {/* Top Header */}
                 <div className="flex justify-between items-end mb-8">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Degree Program Management</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Degree Program Management</h1>
                         <p className="text-gray-500">Manage university degree programs and their codes.</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Import CSV
-                        </button>
-                        <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Export
-                        </button>
                     </div>
                 </div>
 
@@ -79,9 +69,9 @@ const ManageCourses = () => {
                     {/* Left Column: Add Form */}
                     <div className="w-80 flex-shrink-0 space-y-6">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                <h3 className="font-bold text-gray-900">Add New Program</h3>
-                                <button className="text-blue-600 hover:text-blue-700">
+                            <div className="p-4 border-b border-blue-100 flex justify-between items-center bg-blue-900 text-white">
+                                <h3 className="font-bold">Add New Program</h3>
+                                <button className="text-blue-200 hover:text-white">
                                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                                 </button>
                             </div>
@@ -91,7 +81,7 @@ const ManageCourses = () => {
                                     <input
                                         type="text"
                                         placeholder="e.g. Computer Science"
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         required
@@ -102,7 +92,7 @@ const ManageCourses = () => {
                                     <input
                                         type="text"
                                         placeholder="e.g. CS"
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                         value={formData.code}
                                         onChange={e => setFormData({ ...formData, code: e.target.value })}
                                         required
@@ -112,7 +102,7 @@ const ManageCourses = () => {
                                     <label className="block text-xs font-bold text-gray-700 mb-1">Description (Optional)</label>
                                     <textarea
                                         placeholder="Brief description of the degree..."
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                         rows="3"
                                         value={formData.description}
                                         onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -120,8 +110,8 @@ const ManageCourses = () => {
                                 </div>
 
                                 <div className="pt-2 flex gap-3">
-                                    <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm transition-colors shadow-sm">Save Program</button>
-                                    <button type="button" onClick={() => setFormData({ name: '', code: '', description: '' })} className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-lg text-sm transition-colors">Clear</button>
+                                    <button type="submit" className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-all active:scale-95 shadow-md">Save Program</button>
+                                    <button type="button" onClick={() => setFormData({ name: '', code: '', description: '' })} className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg text-sm transition-colors">Clear</button>
                                 </div>
                             </form>
                         </div>
@@ -155,10 +145,10 @@ const ManageCourses = () => {
                                     <input
                                         type="text"
                                         placeholder="Search programs..."
-                                        className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-900 outline-none bg-gray-50 focus:bg-white transition-all"
                                     />
                                 </div>
-                                <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
+                                <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 focus:ring-2 focus:ring-blue-900 transition-all">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
                                 </button>
                             </div>
@@ -166,18 +156,17 @@ const ManageCourses = () => {
 
                         <div className="flex-1 overflow-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
+                                <thead className="bg-blue-50 border-b border-blue-100 sticky top-0">
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Program Code</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Program Name</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Faculty</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Subjects Count</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Program Code</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Program Name</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Faculty</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider text-right">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {courses.length === 0 && !loading && (
-                                        <tr><td colSpan="5" className="p-8 text-center text-gray-500">No programs found.</td></tr>
+                                        <tr><td colSpan="4" className="p-8 text-center text-gray-500">No programs found.</td></tr>
                                     )}
                                     {courses.map((course) => (
                                         <tr key={course.id} className="hover:bg-gray-50 transition-colors">
@@ -186,9 +175,6 @@ const ManageCourses = () => {
                                             </td>
                                             <td className="px-6 py-4 font-bold text-gray-900 text-sm">{course.name}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600">{course.faculty}</td>
-                                            <td className="px-6 py-4 text-center text-sm text-gray-600 font-medium">
-                                                {course.totalSubjects}
-                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
@@ -205,8 +191,8 @@ const ManageCourses = () => {
                         <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
                             <span className="text-xs text-gray-500 font-medium">Showing {courses.length} programs</span>
                             <div className="flex gap-2">
-                                <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Previous</button>
-                                <button className="px-4 py-2 border border-blue-100 bg-blue-50 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100">Next</button>
+                                <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-all">Previous</button>
+                                <button className="px-4 py-2 bg-blue-900 rounded-lg text-sm font-semibold text-white hover:bg-blue-800 shadow-md transition-all active:scale-95">Next</button>
                             </div>
                         </div>
                     </div>

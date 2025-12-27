@@ -84,7 +84,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student" element={<StudentDashboard />} />
             <Route path="/modules" element={<Modules />} />
-            <Route path="/grades" element={<Grades />} />
+            <Route path="/assessments" element={<Grades />} />
           </Route>
 
           {/* Shared Protected Routes */}

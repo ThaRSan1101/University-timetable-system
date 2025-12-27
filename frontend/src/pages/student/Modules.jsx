@@ -13,12 +13,18 @@ const Modules = () => {
     useEffect(() => {
         const fetchModules = async () => {
             try {
-                // Fetch student profile
-                const profileRes = await api.get(`students/?user=${user.id}`);
-                if (profileRes.data.length > 0) {
-                    const studentProfile = profileRes.data[0];
-                    setProfile(studentProfile);
+                // Use profile from auth context if available
+                let studentProfile = user.student_profile;
 
+                if (!studentProfile) {
+                    const profileRes = await api.get(`students/?user=${user.id}`);
+                    if (profileRes.data.length > 0) {
+                        studentProfile = profileRes.data[0];
+                    }
+                }
+
+                if (studentProfile) {
+                    setProfile(studentProfile);
                     // Fetch all subjects for the student's course and year
                     const response = await api.get(`subjects/?course=${studentProfile.course}&year=${studentProfile.year}`);
                     setModules(response.data);
@@ -61,7 +67,7 @@ const Modules = () => {
             <Sidebar />
 
             {/* Main Content */}
-            <div className="flex-1 ml-64 overflow-auto">
+            <div className="flex-1 ml-72 overflow-auto">
                 <div className="p-8">
                     {/* Header */}
                     <div className="mb-6">
@@ -77,7 +83,7 @@ const Modules = () => {
                         <select
                             value={selectedSemester}
                             onChange={(e) => setSelectedSemester(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none"
                         >
                             <option value="all">All Semesters</option>
                             {Object.keys(groupedModules).sort().map(sem => (
@@ -101,7 +107,7 @@ const Modules = () => {
                         <div className="space-y-8">
                             {filteredSemesters.map(semester => (
                                 <div key={semester} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
                                         <h2 className="text-2xl font-bold text-white">
                                             Semester {semester}
                                         </h2>
@@ -118,7 +124,7 @@ const Modules = () => {
                                                     className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100 hover:shadow-md transition-shadow duration-200"
                                                 >
                                                     <div className="flex items-start justify-between mb-3">
-                                                        <div className="bg-blue-600 text-white rounded-lg px-3 py-1 text-xs font-semibold">
+                                                        <div className="bg-blue-900 text-white rounded-lg px-3 py-1 text-xs font-semibold">
                                                             {module.code || 'N/A'}
                                                         </div>
                                                         <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-sm">

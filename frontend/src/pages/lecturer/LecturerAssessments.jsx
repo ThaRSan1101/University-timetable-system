@@ -3,12 +3,13 @@ import LecturerSidebar from '../../components/LecturerSidebar';
 
 const LecturerAssessments = () => {
     const [assessments, setAssessments] = useState([
-        { id: 1, title: 'Data Structures Project', type: 'Assignment', module: 'CS201', dueDate: '2024-12-28', status: 'Active' },
-        { id: 2, title: 'Database Quiz 1', type: 'Quiz', module: 'CS202', dueDate: '2024-12-30', status: 'Scheduled' },
+        { id: 1, title: 'Data Structures Project', type: 'Assignment', module: 'CS201', dueDate: '2024-12-28', status: 'Active', description: 'Complete all data structure implementations.' },
+        { id: 2, title: 'Database Quiz 1', type: 'Quiz', module: 'CS202', dueDate: '2024-12-30', status: 'Scheduled', description: 'Covers normalization and SQL basics.' },
     ]);
 
-    const [showModal, setShowModal] = useState(false);
-    const [newAssessment, setNewAssessment] = useState({
+    const [showPanel, setShowPanel] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [formData, setFormData] = useState({
         title: '',
         type: 'Assignment',
         module: '',
@@ -16,199 +17,249 @@ const LecturerAssessments = () => {
         description: ''
     });
 
-    const handleCreate = (e) => {
+    const handleOpenCreate = () => {
+        setEditingId(null);
+        setFormData({ title: '', type: 'Assignment', module: '', dueDate: '', description: '' });
+        setShowPanel(true);
+    };
+
+    const handleOpenEdit = (assessment) => {
+        setEditingId(assessment.id);
+        setFormData({
+            title: assessment.title,
+            type: assessment.type,
+            module: assessment.module,
+            dueDate: assessment.dueDate,
+            description: assessment.description || ''
+        });
+        setShowPanel(true);
+    };
+
+    const handleSubmit = (e) => {
         e.preventDefault();
-        const assessment = {
-            id: assessments.length + 1,
-            ...newAssessment,
-            status: 'Active'
-        };
-        setAssessments([...assessments, assessment]);
-        setShowModal(false);
-        setNewAssessment({ title: '', type: 'Assignment', module: '', dueDate: '', description: '' });
+        if (editingId) {
+            // Update existing
+            setAssessments(assessments.map(a =>
+                a.id === editingId ? { ...a, ...formData } : a
+            ));
+        } else {
+            // Create new
+            const assessment = {
+                id: assessments.length + 1,
+                ...formData,
+                status: 'Active'
+            };
+            setAssessments([...assessments, assessment]);
+        }
+        setShowPanel(false);
+        setFormData({ title: '', type: 'Assignment', module: '', dueDate: '', description: '' });
+    };
+
+    const handleCancel = (id) => {
+        if (window.confirm('Are you sure you want to cancel this assessment?')) {
+            setAssessments(assessments.map(a =>
+                a.id === id ? { ...a, status: 'Canceled' } : a
+            ));
+        }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex font-sans">
+        <div className="min-h-screen bg-gray-50 flex font-sans overflow-hidden">
             <LecturerSidebar />
 
-            <div className="flex-1 ml-72 overflow-auto">
-                <div className="p-8">
+            <div className="flex-1 ml-72 flex h-screen overflow-hidden">
+                {/* Main Content List Area */}
+                <div className={`flex-1 overflow-auto p-8 ${showPanel ? 'pr-4' : ''}`}>
                     <div className="flex justify-between items-center mb-8">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Assessments & Quizzes</h1>
                             <p className="text-gray-500 mt-1">Manage coursework and evaluations for your students</p>
                         </div>
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-sm transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Create New
-                        </button>
-                    </div>
-
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="text-gray-500 text-sm font-medium uppercase tracking-wide">Active Assessments</div>
-                            <div className="text-3xl font-bold text-gray-900 mt-2">{assessments.filter(a => a.status === 'Active').length}</div>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="text-gray-500 text-sm font-medium uppercase tracking-wide">Upcoming Deadlines</div>
-                            <div className="text-3xl font-bold text-blue-600 mt-2">2</div>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="text-gray-500 text-sm font-medium uppercase tracking-wide">Total Submissions</div>
-                            <div className="text-3xl font-bold text-green-600 mt-2">145</div>
-                        </div>
+                        {!showPanel && (
+                            <button
+                                onClick={handleOpenCreate}
+                                className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-md active:scale-95 transition-all"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Create New
+                            </button>
+                        )}
                     </div>
 
                     {/* Assessments List */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-white flex justify-between items-center">
                             <h2 className="font-semibold text-gray-800">All Assessments</h2>
                             <div className="flex gap-2">
-                                <select className="text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <select className="text-sm border-gray-200 rounded-lg focus:ring-blue-900 focus:border-transparent p-2 outline-none border">
                                     <option>All Modules</option>
                                     <option>CS201</option>
                                     <option>CS202</option>
                                 </select>
                             </div>
                         </div>
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase bg-gray-50">
-                                    <th className="px-6 py-4">Title</th>
-                                    <th className="px-6 py-4">Module</th>
-                                    <th className="px-6 py-4">Type</th>
-                                    <th className="px-6 py-4">Due Date</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {assessments.map((assessment) => (
-                                    <tr key={assessment.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-gray-900">{assessment.title}</td>
-                                        <td className="px-6 py-4 text-gray-600">
-                                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
-                                                {assessment.module}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${assessment.type === 'Quiz' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                                                }`}>
-                                                {assessment.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-600 text-sm">{assessment.dueDate}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${assessment.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                {assessment.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-3">Edit</button>
-                                            <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        <th className="px-6 py-4">Title</th>
+                                        <th className="px-6 py-4">Module</th>
+                                        <th className="px-6 py-4">Type</th>
+                                        <th className="px-6 py-4">Due Date</th>
+                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {assessments.map((assessment) => (
+                                        <tr key={assessment.id} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-6 py-4 text-gray-900 font-medium">{assessment.title}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-medium uppercase">
+                                                    {assessment.module}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {assessment.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-gray-500 text-sm">{assessment.dueDate}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.status === 'Active' ? 'bg-green-100 text-green-700' :
+                                                    assessment.status === 'Canceled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-yellow-100 text-yellow-700'
+                                                    }`}>
+                                                    {assessment.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => handleOpenEdit(assessment)}
+                                                    className="text-blue-900 hover:text-blue-700 mr-4 text-sm font-medium"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => handleCancel(assessment.id)}
+                                                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Create Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                            <h3 className="text-lg font-bold text-gray-900">Create New Assessment</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+                {/* Side Create/Edit Panel */}
+                <div
+                    className={`bg-white border-l border-gray-200 shadow-2xl h-screen flex flex-col ${showPanel ? 'w-[400px] opacity-100' : 'w-0 opacity-0 overflow-hidden'
+                        }`}
+                >
+                    <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="text-xl font-bold text-blue-900 uppercase">
+                            {editingId ? 'Edit Assessment' : 'New Assessment'}
+                        </h3>
+                        <button
+                            onClick={() => setShowPanel(false)}
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 transition-colors"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Title</label>
+                            <input
+                                type="text"
+                                required
+                                className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
+                                placeholder="e.g., Midterm Project"
+                                value={formData.title}
+                                onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            />
                         </div>
-                        <form onSubmit={handleCreate} className="p-6 space-y-4">
+
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Module</label>
                                 <input
                                     type="text"
                                     required
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                    placeholder="e.g., Midterm Project"
-                                    value={newAssessment.title}
-                                    onChange={e => setNewAssessment({ ...newAssessment, title: e.target.value })}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Module Code</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                        placeholder="e.g., CS201"
-                                        value={newAssessment.module}
-                                        onChange={e => setNewAssessment({ ...newAssessment, module: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                                    <select
-                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                        value={newAssessment.type}
-                                        onChange={e => setNewAssessment({ ...newAssessment, type: e.target.value })}
-                                    >
-                                        <option value="Assignment">Assignment</option>
-                                        <option value="Quiz">Quiz</option>
-                                        <option value="Exam">Exam</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                    value={newAssessment.dueDate}
-                                    onChange={e => setNewAssessment({ ...newAssessment, dueDate: e.target.value })}
+                                    className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
+                                    placeholder="e.g., CS201"
+                                    value={formData.module}
+                                    onChange={e => setFormData({ ...formData, module: e.target.value })}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                    rows="3"
-                                    placeholder="Instructions for students..."
-                                    value={newAssessment.description}
-                                    onChange={e => setNewAssessment({ ...newAssessment, description: e.target.value })}
-                                ></textarea>
-                            </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 from-gray-50"
+                                <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Type</label>
+                                <select
+                                    className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
+                                    value={formData.type}
+                                    onChange={e => setFormData({ ...formData, type: e.target.value })}
                                 >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm"
-                                >
-                                    Create Assessment
-                                </button>
+                                    <option value="Assignment">Assignment</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Exam">Exam</option>
+                                </select>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Due Date</label>
+                            <input
+                                type="date"
+                                required
+                                className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
+                                value={formData.dueDate}
+                                onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Description</label>
+                            <textarea
+                                className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all h-32 font-sans"
+                                placeholder="Instructions for students..."
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            ></textarea>
+                        </div>
+
+                        <div className="pt-6">
+                            <button
+                                type="submit"
+                                className="w-full py-4 text-sm font-semibold uppercase text-white bg-blue-900 rounded-xl hover:bg-blue-800 shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                            >
+                                {editingId ? (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Update Assessment
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Create Assessment
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            )}
+            </div>
         </div>
     );
 };

@@ -6,6 +6,8 @@ const ManageClassrooms = () => {
     const [classrooms, setClassrooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddPanel, setShowAddPanel] = useState(false);
+    const [panelMode, setPanelMode] = useState('add');
+    const [selectedRoomId, setSelectedRoomId] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -55,17 +57,49 @@ const ManageClassrooms = () => {
         }
     };
 
+    const handleEditClick = (room) => {
+        setPanelMode('edit');
+        setSelectedRoomId(room.id);
+        setFormData({
+            room_number: room.room_number,
+            room_type: room.room_type || 'Lecture Hall',
+            capacity: room.capacity || 30,
+            facilities: {
+                projector: room.facilities?.includes('Projector') || false,
+                whiteboard: room.facilities?.includes('Whiteboard') || true,
+                ac: room.facilities?.includes('AC') || false,
+                pc: room.facilities?.includes('PC') || false
+            }
+        });
+        setShowAddPanel(true);
+    };
+
+    const handleAddClick = () => {
+        setPanelMode('add');
+        setSelectedRoomId(null);
+        setFormData({
+            room_number: '',
+            room_type: 'Lecture Hall',
+            capacity: 30,
+            facilities: { projector: false, whiteboard: true, ac: false, pc: false }
+        });
+        setShowAddPanel(true);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Mapping UI fields to Backend API
             const payload = {
                 room_number: formData.room_number,
                 room_type: formData.room_type.toLowerCase().includes('lab') ? 'lab' : 'lecture',
                 capacity: formData.capacity
             };
 
-            await api.post('classrooms/', payload);
+            if (panelMode === 'edit') {
+                await api.put(`classrooms/${selectedRoomId}/`, payload);
+            } else {
+                await api.post('classrooms/', payload);
+            }
 
             // Reset and refresh
             setFormData({
@@ -93,16 +127,9 @@ const ManageClassrooms = () => {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <AdminSidebar />
 
-            <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+            <div className="flex-1 ml-72 p-8 overflow-y-auto h-screen">
                 {/* Header Section */}
                 <div className="mb-8">
-                    <nav className="flex text-sm text-gray-500 mb-2">
-                        <span>Dashboard</span>
-                        <span className="mx-2">›</span>
-                        <span>Resources</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-900 font-medium">Classrooms & Labs</span>
-                    </nav>
 
                     <div className="flex justify-between items-start">
                         <div>
@@ -112,13 +139,9 @@ const ManageClassrooms = () => {
                             </p>
                         </div>
                         <div className="flex gap-3">
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 bg-white">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                Import CSV
-                            </button>
                             <button
-                                onClick={() => setShowAddPanel(true)}
-                                className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 flex items-center gap-2 shadow-sm"
+                                onClick={handleAddClick}
+                                className="px-4 py-2 bg-blue-900 rounded-lg text-sm font-semibold text-white hover:bg-blue-800 flex items-center gap-2 shadow-md transition-all active:scale-95"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                 Add Room
@@ -134,16 +157,16 @@ const ManageClassrooms = () => {
                         <input
                             type="text"
                             placeholder="Search by room # or building..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50"
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none bg-gray-50 transition-all"
                         />
                     </div>
                     <div className="flex gap-3">
-                        <select className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-900 outline-none transition-all">
                             <option>All Types</option>
                             <option>Lecture Hall</option>
                             <option>Laboratory</option>
                         </select>
-                        <select className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-900 outline-none transition-all">
                             <option>Status</option>
                             <option>Active</option>
                             <option>Maintenance</option>
@@ -156,23 +179,23 @@ const ManageClassrooms = () => {
                     <div className={`flex-1 transition-all duration-300 ${showAddPanel ? 'w-2/3' : 'w-full'}`}>
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100">
+                                <thead className="bg-blue-50 border-b border-blue-100">
                                     <tr>
                                         <th className="px-6 py-4 w-12">
-                                            <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                            <input type="checkbox" className="rounded border-gray-300 text-blue-900 focus:ring-blue-900" />
                                         </th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Room Info</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Capacity</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Room Info</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Type</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Capacity</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {classrooms.length === 0 && !loading && (
                                         <tr>
                                             <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                                                No rooms found. <button onClick={handleGenerateMock} className="text-blue-600 font-semibold hover:underline">Generate Data</button>
+                                                No rooms found. <button onClick={handleGenerateMock} className="text-blue-600 font-semibold hover:underline">Generate data</button>
                                             </td>
                                         </tr>
                                     )}
@@ -201,7 +224,7 @@ const ManageClassrooms = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="text-gray-400 hover:text-gray-600">
+                                                <button onClick={() => handleEditClick(room)} className="text-gray-500 hover:text-blue-900 transition-colors p-1">
                                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
                                                 </button>
                                             </td>
@@ -211,14 +234,14 @@ const ManageClassrooms = () => {
                             </table>
 
                             {/* Pagination */}
-                            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                            <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
                                 <span className="text-sm text-gray-500">Showing {classrooms.length} rooms</span>
                                 <div className="flex gap-1">
-                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">‹</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded bg-blue-600 text-white font-semibold">1</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">2</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">3</button>
-                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">›</button>
+                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all">‹</button>
+                                    <button className="w-8 h-8 flex items-center justify-center rounded bg-blue-900 text-white font-bold transition-all shadow-sm">1</button>
+                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all">2</button>
+                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all">3</button>
+                                    <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all">›</button>
                                 </div>
                             </div>
                         </div>
@@ -226,10 +249,10 @@ const ManageClassrooms = () => {
 
                     {/* Quick Add Room Panel */}
                     {showAddPanel && (
-                        <div className="w-96 bg-white rounded-xl border border-gray-200 shadow-lg flex flex-col h-fit sticky top-0 animate-fade-in-right">
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
-                                <h3 className="font-bold text-gray-900 border-gray-100">Quick Add Room</h3>
-                                <button onClick={() => setShowAddPanel(false)} className="text-gray-400 hover:text-gray-600">
+                        <div className="w-96 bg-white rounded-xl border border-gray-200 shadow-xl flex flex-col h-fit sticky top-0 animate-fade-in-right">
+                            <div className="p-6 border-b border-blue-100 flex justify-between items-center bg-blue-900 text-white rounded-t-xl">
+                                <h3 className="font-bold">{panelMode === 'edit' ? 'Edit Room' : 'Quick Add Room'}</h3>
+                                <button onClick={() => setShowAddPanel(false)} className="text-blue-200 hover:text-white transition-colors">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -241,7 +264,7 @@ const ManageClassrooms = () => {
                                     <input
                                         type="text"
                                         placeholder="e.g. ENG-204"
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors"
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                         value={formData.room_number}
                                         onChange={e => setFormData({ ...formData, room_number: e.target.value })}
                                         required
@@ -253,7 +276,7 @@ const ManageClassrooms = () => {
                                 <div>
                                     <label className="block text-sm font-bold text-gray-900 mb-2">Room Classification</label>
                                     <select
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                         value={formData.room_type}
                                         onChange={e => setFormData({ ...formData, room_type: e.target.value })}
                                     >
@@ -310,15 +333,15 @@ const ManageClassrooms = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowAddPanel(false)}
-                                        className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50"
+                                        className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 px-4 py-3 bg-blue-600 rounded-lg text-sm font-bold text-white hover:bg-blue-700 shadow-md"
+                                        className="flex-[2] px-4 py-3 bg-blue-900 rounded-lg text-sm font-bold text-white hover:bg-blue-800 shadow-lg transition-all active:scale-95"
                                     >
-                                        Save Room
+                                        {panelMode === 'edit' ? 'Save Changes' : 'Add Room'}
                                     </button>
                                 </div>
                             </form>
