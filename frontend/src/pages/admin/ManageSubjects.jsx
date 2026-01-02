@@ -30,16 +30,7 @@ const ManageModules = () => {
                 api.get('courses/')
             ]);
 
-            // Enhance data for UI
-            const enhancedModules = subRes.data.map(sub => ({
-                ...sub,
-                department: sub.course_name || 'General',
-                credits: sub.weekly_hours || 3,
-                semesterTerm: sub.semester % 2 !== 0 ? 'Fall' : 'Spring', // Mock logic
-                yearVal: 2024
-            }));
-
-            setModules(enhancedModules);
+            setModules(subRes.data);
             setCourses(courseRes.data);
         } catch {
             console.error("Failed to fetch data");
@@ -284,40 +275,20 @@ const ManageModules = () => {
                                                 <div className="text-sm font-semibold text-gray-700">{sub.lecturer_name || 'TBA'}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${getBadgeStyle(sub.department)}`}>
-                                                    {sub.department}
+                                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${getBadgeStyle(sub.course_name)}`}>
+                                                    {sub.course_name}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center text-sm text-gray-600 font-bold">
-                                                {sub.year || sub.yearVal}
+                                                {sub.year}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <span className="text-sm font-medium text-gray-600 block">{sub.semesterTerm || (sub.semester === 1 ? 'Fall' : 'Spring')}</span>
+                                                <span className="text-sm font-medium text-gray-600 block">{sub.semester === 1 ? 'Fall' : 'Spring'}</span>
                                             </td>
-                                        </tr>
-                                    ))}
-                                    {/* Mock Rows to fill if empty */}
-                                    {modules.length === 0 && loading && [1, 2, 3, 4].map(i => (
-                                        <tr key={i} className="animate-pulse">
-                                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
-                                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
-                                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
-                                            <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded-full w-24"></div></td>
-                                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div></td>
-                                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16 ml-auto"></div></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
-
-                        {/* Pagination */}
-                        <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
-                            <span className="text-xs text-gray-500 font-medium">Showing 1-5 of {modules.length} modules</span>
-                            <div className="flex gap-2">
-                                <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Previous</button>
-                                <button className="px-4 py-2 border border-blue-100 bg-blue-50 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100">Next</button>
-                            </div>
                         </div>
                     </div>
                 </div>

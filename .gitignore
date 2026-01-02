@@ -1,20 +1,62 @@
-# System
+# System Files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
 
 # Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 backend/.env
+frontend/.env
 
 # Python
 backend/venv/
 backend/__pycache__/
-*.pyc
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
 
-# Node
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Node.js
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# IDE
+# IDE & Editors
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+.vs/
+
+# OS
+*.bak
+*.tmp
+.cache/
+
+# Test Coverage
+htmlcov/
+.coverage
+.pytest_cache/
+

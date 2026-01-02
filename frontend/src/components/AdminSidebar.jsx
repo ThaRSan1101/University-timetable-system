@@ -1,7 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import uwuLogo from '../assets/uwu.png';
 
 const AdminSidebar = () => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
     const location = useLocation();
     const isActive = (path) => location.pathname === path;
 
@@ -39,8 +42,8 @@ const AdminSidebar = () => {
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        logout();
+        navigate('/login');
     };
 
     return (

@@ -1,167 +1,67 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * StudentDashboard - Pure Display Component
+ * 
+ * NO LOGIC HERE - Just displays backend-processed data
+ * All filtering, sorting, calculations done by backend
+ */
 const StudentDashboard = () => {
     const { user } = useAuth();
-    const [timetable, setTimetable] = useState([]);
+    const [timetableData, setTimetableData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState(null);
-    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
-
-    const dummyTimetable = [
-        {
-            id: 1,
-            day: 'Monday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Advanced Algorithms', lecturer_name: 'Dr. Aruna Perera' },
-            classroom_details: { room_number: 'Lab 01' }
-        },
-        {
-            id: 2,
-            day: 'Monday',
-            start_time: '13:00',
-            end_time: '15:00',
-            subject_details: { name: 'Database Systems', lecturer_name: 'Prof. Kamal Silva' },
-            classroom_details: { room_number: 'Hall A' }
-        },
-        {
-            id: 3,
-            day: 'Tuesday',
-            start_time: '10:00',
-            end_time: '12:00',
-            subject_details: { name: 'Machine Learning', lecturer_name: 'Dr. Sarah Smith' },
-            classroom_details: { room_number: 'Room 304' }
-        },
-        {
-            id: 4,
-            day: 'Wednesday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Software Engineering', lecturer_name: 'Mr. John Doe' },
-            classroom_details: { room_number: 'Web Lab' }
-        },
-        {
-            id: 5,
-            day: 'Thursday',
-            start_time: '14:00',
-            end_time: '16:00',
-            subject_details: { name: 'Computer Networks', lecturer_name: 'Dr. Saman Kumara' },
-            classroom_details: { room_number: 'Hall B' }
-        },
-        {
-            id: 6,
-            day: 'Friday',
-            start_time: '11:00',
-            end_time: '13:00',
-            subject_details: { name: 'Mobile Computing', lecturer_name: 'Ms. Janaki Liyanage' },
-            classroom_details: { room_number: 'Lab 02' }
-        }
-    ];
+    const [viewMode, setViewMode] = useState('calendar');
 
     useEffect(() => {
         const fetchTimetable = async () => {
+            if (!user) return;
+
             try {
-                // Use profile from user context if available, otherwise fetch it
-                let studentProfile = user.student_profile;
+                // Get student's course from profile
+                const courseId = user.student_profile?.course;
 
-                if (!studentProfile) {
-                    const profileRes = await api.get(`students/?user=${user.id}`);
-                    if (profileRes.data.length > 0) {
-                        studentProfile = profileRes.data[0];
-                    }
+                if (!courseId) {
+                    console.error("Student has no course assigned");
+                    setLoading(false);
+                    return;
                 }
 
-                if (studentProfile) {
-                    setProfile(studentProfile);
-                    const response = await api.get(`timetable/?course_id=${studentProfile.course}&year=${studentProfile.year}&semester=${studentProfile.semester}`);
-                    if (response.data && response.data.length > 0) {
-                        setTimetable(response.data);
-                    } else {
-                        setTimetable(dummyTimetable);
-                    }
-                } else {
-                    setTimetable(dummyTimetable);
-                }
+                // Fetch FORMATTED timetable from backend
+                // Backend does ALL processing: grouping, sorting, coloring, etc.
+                const response = await api.get(`timetable/formatted/?course_id=${courseId}&view=${viewMode}`);
+                setTimetableData(response.data);
             } catch (error) {
-                console.error("Error fetching timetable, using dummy data", error);
-                setTimetable(dummyTimetable);
+                console.error("Error fetching timetable", error);
             } finally {
                 setLoading(false);
             }
         };
-        if (user) fetchTimetable();
-    }, [user]);
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const timeSlots = Array.from({ length: 10 }, (_, i) => `${9 + i}:00`);
-
-    const getDayClasses = (day) => {
-        return timetable.filter(slot => slot.day === day);
-    };
-
-    const getClassPosition = (startTime) => {
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const startHour = 9;
-        return ((hours - startHour) * 60 + (minutes || 0)) / 60;
-    };
-
-    const getClassDuration = (startTime, endTime) => {
-        const [startHours, startMinutes] = startTime.split(':').map(Number);
-        const [endHours, endMinutes] = endTime.split(':').map(Number);
-        return ((endHours * 60 + (endMinutes || 0)) - (startHours * 60 + (startMinutes || 0))) / 60;
-    };
-
-    const formatTime = (time) => {
-        if (!time) return '';
-        return time.slice(0, 5);
-    };
-
-    const getNextClass = () => {
-        const now = new Date();
-        const currentDay = days[now.getDay() - 1];
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        const todayClasses = getDayClasses(currentDay);
-        const upcoming = todayClasses
-            .filter(slot => slot.start_time > currentTime)
-            .sort((a, b) => a.start_time.localeCompare(b.start_time))[0];
-
-        if (upcoming) {
-            const [uH, uM] = upcoming.start_time.split(':').map(Number);
-            const [cH, cM] = currentTime.split(':').map(Number);
-            const minutes = (uH * 60 + uM) - (cH * 60 + cM);
-            return { ...upcoming, minutesUntil: minutes };
-        }
-        return null;
-    };
-
-    const colors = [
-        'bg-blue-100 border-blue-500 text-blue-700',
-        'bg-green-100 border-green-500 text-green-700',
-        'bg-purple-100 border-purple-500 text-purple-700',
-        'bg-orange-100 border-orange-500 text-orange-700',
-        'bg-pink-100 border-pink-500 text-pink-700',
-        'bg-teal-100 border-teal-500 text-teal-700',
-    ];
-
-    const getColorForSubject = (subjectName) => {
-        const hash = subjectName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return colors[hash % colors.length];
-    };
-
-    const nextClass = getNextClass();
+        fetchTimetable();
+    }, [user, viewMode]);
 
     const handleExport = () => {
-        const content = "Timetable Data\n" + timetable.map(t => `${t.day}: ${t.start_time}-${t.end_time} ${t.subject_details.name}`).join("\n");
+        if (!timetableData) return;
+
+        let content = "Student Timetable\n\n";
+        timetableData.days.forEach(day => {
+            if (day.has_classes) {
+                content += `${day.day}:\n`;
+                day.classes.forEach(cls => {
+                    content += `  ${cls.time.start}-${cls.time.end} ${cls.subject.name} at ${cls.classroom.room_number}\n`;
+                });
+                content += '\n';
+            }
+        });
+
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'timetable.txt';
+        link.download = 'student_timetable.txt';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -172,7 +72,17 @@ const StudentDashboard = () => {
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mx-auto mb-4"></div>
-                    <p className="text-gray-600 text-lg">Loading your timetable...</p>
+                    <p className="text-gray-600 font-medium">Loading your schedule...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!timetableData) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <p className="text-gray-600">No timetable data available</p>
                 </div>
             </div>
         );
@@ -185,231 +95,185 @@ const StudentDashboard = () => {
             <div className="flex-1 overflow-auto ml-72">
                 <div className="p-8">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">My Semester Timetable</h1>
-                            <p className="text-gray-500 mt-1">Fall Semester 2024 • Week 5</p>
+                            <h1 className="text-3xl font-bold text-gray-900">My Class Schedule</h1>
+                            <p className="text-gray-500 mt-1">Academic Year 2024-2025 • Semester 1</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                            </button>
                             <button
                                 onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-900 text-white rounded-lg font-medium transition-all shadow-md active:scale-95"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white rounded-xl font-semibold transition-all shadow-lg hover:bg-blue-800"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
-                                Export
+                                Export Schedule
                             </button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        {/* Filters Sidebar */}
-                        <div className="lg:col-span-1">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        {/* Sidebar Controls */}
+                        <div className="lg:col-span-1 space-y-6">
+                            {/* View Mode Toggle */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                        </svg>
-                                        Filters
-                                    </div>
-                                    <button className="text-blue-900 text-sm font-bold hover:underline">Reset</button>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">SEMESTER</label>
-                                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none">
-                                        <option>First Semester</option>
-                                        <option>Second Semester</option>
-                                    </select>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">VIEW MODE</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setViewMode('calendar')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'calendar'
-                                                ? 'bg-blue-900 text-white shadow-lg'
+                                <h3 className="font-semibold text-gray-900 mb-4">View Mode</h3>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setViewMode('calendar')}
+                                        className={`flex-1 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'calendar'
+                                                ? 'bg-blue-900 text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            Calendar
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('list')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'list'
-                                                ? 'bg-blue-900 text-white shadow-lg'
+                                            }`}
+                                    >
+                                        Calendar
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`flex-1 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'list'
+                                                ? 'bg-blue-900 text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                            </svg>
-                                            List
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">FIND MODULE</label>
-                                    <div className="relative">
-                                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. CS101"
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none"
-                                        />
-                                    </div>
+                                            }`}
+                                    >
+                                        List
+                                    </button>
                                 </div>
                             </div>
 
-                            {nextClass && (
-                                <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group mt-6">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                        <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
-                                    </div>
-                                    <div className="relative z-10">
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-blue-300 mb-4 flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                                            Current Status
-                                        </p>
-                                        <p className="text-sm font-medium text-blue-100 mb-1">Up Next in {nextClass.minutesUntil} mins</p>
-                                        <h4 className="text-xl font-bold mb-4 leading-tight">{nextClass.subject_details.name}</h4>
-                                        <div className="flex items-center gap-3 text-xs font-semibold bg-white/10 p-3 rounded-xl border border-white/10">
-                                            <div className="flex flex-col">
-                                                <span className="text-blue-300 uppercase text-[9px]">Venue</span>
-                                                <span>Room {nextClass.classroom_details.room_number}</span>
-                                            </div>
-                                            <div className="w-[1px] h-8 bg-white/10 mx-1"></div>
-                                            <div className="flex flex-col overflow-hidden">
-                                                <span className="text-blue-300 uppercase text-[9px]">Lecturer</span>
-                                                <span className="truncate">{nextClass.subject_details.lecturer_name}</span>
-                                            </div>
+                            {/* Next Class Card */}
+                            {timetableData.next_class && (
+                                <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-blue-300 mb-4">
+                                        Up Next
+                                    </p>
+                                    <h4 className="text-xl font-bold mb-4">{timetableData.next_class.subject}</h4>
+                                    <div className="flex items-center gap-3 text-sm bg-white/10 p-3 rounded-xl">
+                                        <div className="flex flex-col">
+                                            <span className="text-blue-300 text-xs">Room</span>
+                                            <span>{timetableData.next_class.classroom}</span>
                                         </div>
+                                        <div className="w-px h-8 bg-white/10"></div>
+                                        <div className="flex flex-col">
+                                            <span className="text-blue-300 text-xs">Time</span>
+                                            <span>{timetableData.next_class.start_time}</span>
+                                        </div>
+                                        {timetableData.next_class.minutes_until && (
+                                            <>
+                                                <div className="w-px h-8 bg-white/10"></div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-blue-300 text-xs">In</span>
+                                                    <span>{timetableData.next_class.minutes_until} min</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
                         </div>
 
+                        {/* Main Content */}
                         <div className="lg:col-span-3">
                             {viewMode === 'calendar' ? (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="grid grid-cols-6 border-b border-gray-200">
-                                        <div className="p-4 bg-gray-50"></div>
-                                        {days.map((day, index) => {
-                                            const date = new Date();
-                                            date.setDate(date.getDate() - date.getDay() + index + 1);
-                                            const isToday = date.toDateString() === new Date().toDateString();
-
-                                            return (
-                                                <div key={day} className="p-4 text-center border-l border-gray-200">
-                                                    <div className="text-xs text-gray-500 uppercase mb-1">{day.substring(0, 3)}</div>
-                                                    <div className={`text-2xl font-bold ${isToday ? 'bg-blue-900 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}>
-                                                        {date.getDate()}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                    {/* Calendar Header */}
+                                    <div className="grid grid-cols-6 border-b border-gray-100 bg-gray-50">
+                                        <div className="p-4 border-r border-gray-100"></div>
+                                        {timetableData.days.map((day, index) => (
+                                            <div key={day.day} className="p-4 text-center border-l border-gray-100">
+                                                <div className="text-xs font-bold text-gray-400 uppercase">{day.day.substring(0, 3)}</div>
+                                                <div className="text-2xl font-bold text-gray-700">{index + 1}</div>
+                                            </div>
+                                        ))}
                                     </div>
 
+                                    {/* Calendar Grid */}
                                     <div className="relative">
                                         <div className="grid grid-cols-6">
-                                            <div className="border-r border-gray-200">
-                                                {timeSlots.map(time => (
-                                                    <div key={time} className="h-20 border-b border-gray-100 px-3 py-2 text-xs text-gray-500">
+                                            {/* Time Column */}
+                                            <div className="border-r border-gray-100 bg-gray-50">
+                                                {timetableData.time_range.slots.map(time => (
+                                                    <div key={time} className="h-20 border-b border-gray-50 px-4 py-3 text-xs font-bold text-gray-400">
                                                         {time}
                                                     </div>
                                                 ))}
                                             </div>
 
-                                            {days.map(day => (
-                                                <div key={day} className="relative border-l border-gray-200">
-                                                    {timeSlots.map(time => (
-                                                        <div key={time} className="h-20 border-b border-gray-100"></div>
+                                            {/* Day Columns */}
+                                            {timetableData.days.map(day => (
+                                                <div key={day.day} className="relative border-l border-gray-100">
+                                                    {timetableData.time_range.slots.map(time => (
+                                                        <div key={time} className="h-20 border-b border-gray-50"></div>
                                                     ))}
 
-                                                    {getDayClasses(day).map(slot => {
-                                                        const top = getClassPosition(slot.start_time) * 80;
-                                                        const height = getClassDuration(slot.start_time, slot.end_time) * 80;
-                                                        const colorClass = getColorForSubject(slot.subject_details.name);
-
-                                                        return (
-                                                            <div
-                                                                key={slot.id}
-                                                                className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
-                                                                style={{ top: `${top}px`, height: `${height}px` }}
-                                                            >
-                                                                <div className="text-xs font-bold mb-1 truncate">
-                                                                    {slot.subject_details.name}
-                                                                </div>
-                                                                <div className="text-xs opacity-90 mb-1">
-                                                                    Room {slot.classroom_details.room_number}
-                                                                </div>
-                                                                <div className="text-xs opacity-75">
-                                                                    {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                                                                </div>
+                                                    {/* Classes - Backend provides position and styling */}
+                                                    {day.classes.map(cls => (
+                                                        <div
+                                                            key={cls.id}
+                                                            className={`absolute left-1 right-1 ${cls.display.color_class} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer`}
+                                                            style={{
+                                                                top: `${cls.display.position_index * 80}px`,
+                                                                height: `${cls.display.duration_blocks * 80}px`
+                                                            }}
+                                                        >
+                                                            <div className="text-xs font-bold opacity-60 mb-1">
+                                                                {cls.time.start} - {cls.time.end}
                                                             </div>
-                                                        );
-                                                    })}
+                                                            <div className="text-sm font-semibold mb-2">
+                                                                {cls.subject.name}
+                                                            </div>
+                                                            <div className="text-xs opacity-80">
+                                                                {cls.classroom.room_number}
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    {days.map(day => {
-                                        const classes = getDayClasses(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
-
-                                        return (
-                                            <div key={day} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                                                    <h3 className="text-lg font-bold text-gray-900">{day}</h3>
-                                                </div>
-                                                <div className="divide-y divide-gray-100">
-                                                    {classes.length > 0 ? (
-                                                        classes.map(slot => (
-                                                            <div key={slot.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center gap-6">
-                                                                <div className="w-24 flex-shrink-0">
-                                                                    <p className="text-lg font-bold text-blue-900">{formatTime(slot.start_time)}</p>
-                                                                    <p className="text-sm text-gray-500">to {formatTime(slot.end_time)}</p>
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <h4 className="text-md font-bold text-gray-900 mb-1">{slot.subject_details.name}</h4>
-                                                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                                                        <span className="flex items-center gap-1">
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                                                            {slot.subject_details.lecturer_name}
-                                                                        </span>
-                                                                        <span className="flex items-center gap-1">
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
-                                                                            Room {slot.classroom_details.room_number}
-                                                                        </span>
-                                                                    </div>
+                                <div className="space-y-6">
+                                    {timetableData.days.map(day => (
+                                        <div key={day.day} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <div className="px-8 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                                <h3 className="text-lg font-bold text-gray-900">{day.day}</h3>
+                                                <span className="text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1 rounded-full">
+                                                    {day.class_count} Classes
+                                                </span>
+                                            </div>
+                                            <div className="divide-y divide-gray-100">
+                                                {day.has_classes ? (
+                                                    day.classes.map(cls => (
+                                                        <div key={cls.id} className="p-8 hover:bg-gray-50 transition-all flex items-center gap-8">
+                                                            <div className="w-24 text-center">
+                                                                <p className="text-lg font-bold text-blue-900">{cls.time.start}</p>
+                                                                <p className="text-sm text-gray-500">to {cls.time.end}</p>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <h4 className="text-xl font-bold text-gray-900 mb-2">{cls.subject.name}</h4>
+                                                                <div className="flex items-center gap-6 text-sm">
+                                                                    <span className="flex items-center gap-2 text-gray-500">
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                                        </svg>
+                                                                        Room {cls.classroom.room_number}
+                                                                    </span>
+                                                                    <span className="text-gray-500">
+                                                                        {cls.subject.lecturer_name}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="p-6 text-center text-gray-400 font-medium italic">
-                                                            No sessions scheduled for {day}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-8 text-center text-gray-400">
+                                                        No classes scheduled for {day.day}
+                                                    </div>
+                                                )}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

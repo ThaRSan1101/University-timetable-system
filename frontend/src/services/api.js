@@ -9,35 +9,51 @@ const api = axios.create({
     },
 });
 
+// Request interceptor to add the auth token header to every request
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('access_token');
         if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
     (error) => Promise.reject(error)
 );
 
+// Response interceptor to handle 401 errors (token expiration)
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response.status === 401 && !originalRequest._retry) {
+
+        if (error.response && error.response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            try {
-                const refreshToken = localStorage.getItem('refresh_token');
-                const response = await axios.post(API_URL + 'auth/refresh/', {
-                    refresh: refreshToken
-                });
-                const { access } = response.data;
-                localStorage.setItem('access_token', access);
-                api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
-                return api(originalRequest);
-            } catch (refreshError) {
-                console.error("Token refresh failed", refreshError);
-                // Logout user or redirect to login
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            if (refreshToken) {
+                try {
+                    const response = await axios.post('http://localhost:8000/api/auth/refresh/', {
+                        refresh: refreshToken
+                    });
+
+                    const newAccessToken = response.data.access;
+                    localStorage.setItem('access_token', newAccessToken);
+
+                    // Update the header on the original request
+                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+                    // Update the default header for future requests
+                    api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+
+                    return api(originalRequest);
+                } catch (refreshError) {
+                    console.error("Token refresh failed", refreshError);
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = '/login';
+                }
+            } else {
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
                 window.location.href = '/login';

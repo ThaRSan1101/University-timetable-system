@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { Toaster } from 'sonner';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
@@ -16,24 +17,7 @@ import Grades from './pages/student/Grades';
 import LecturerAssessments from './pages/lecturer/LecturerAssessments';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Simple Layout
-const Layout = ({ children }) => (
-  <div className="min-h-screen bg-gray-100">
-    <nav className="bg-primary text-white p-4 shadow-md flex justify-between items-center">
-      <div className="text-xl font-bold">University Timetable</div>
-      <div className="flex gap-4 items-center">
-        <a href="/" className="hover:underline">Dashboard</a>
-        <a href="/profile" className="hover:underline">Profile</a>
-        <button onClick={() => {
-          localStorage.clear();
-          window.location.href = '/login';
-        }} className="bg-red-500 px-3 py-1 rounded hover:bg-red-600">Logout</button>
-      </div>
-    </nav>
-    <main>{children}</main>
-  </div>
-);
-
+// Root Redirect Logic
 const RootRedirect = () => {
   const { user, loading } = useAuth();
 
@@ -57,8 +41,14 @@ const RootRedirect = () => {
 
 function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <AuthProvider>
+        <Toaster position="top-center" richColors />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Landing />} />

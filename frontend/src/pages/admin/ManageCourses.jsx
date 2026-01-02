@@ -20,14 +20,7 @@ const ManageCourses = () => {
     const fetchCourses = async () => {
         try {
             const response = await api.get('courses/');
-            // Enhance data for UI
-            const enhancedData = response.data.map(course => ({
-                ...course,
-                totalSubjects: Math.floor(Math.random() * 20) + 10, // Mock stat
-                status: 'Active',
-                faculty: 'Science' // Mock
-            }));
-            setCourses(enhancedData);
+            setCourses(response.data);
         } catch {
             console.error("Failed to fetch courses");
         } finally {

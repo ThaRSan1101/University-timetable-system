@@ -4,7 +4,7 @@ import AdminSidebar from '../../components/AdminSidebar';
 
 const ManageLecturers = () => {
     const [lecturers, setLecturers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [showSidePanel, setShowSidePanel] = useState(false);
     const [panelMode, setPanelMode] = useState('add'); // 'add' or 'edit'
 
@@ -33,17 +33,7 @@ const ManageLecturers = () => {
     const fetchLecturers = async () => {
         try {
             const response = await api.get('lecturers/');
-            // Enhance data with mocks for UI
-            const enhancedData = response.data.map((lec, index) => ({
-                ...lec,
-                name: lec.user.username || 'Unknown',
-                staffId: `LEC-2024-${100 + index}`,
-                avatar: `https://ui-avatars.com/api/?name=${lec.user.username}&background=random`,
-                subjects: index % 2 === 0 ? ['CS101', 'CS202'] : ['MAT101'],
-                weeklyHours: 12 + (index * 2),
-                maxHours: 20
-            }));
-            setLecturers(enhancedData);
+            setLecturers(response.data);
         } catch {
             console.error("Failed to fetch lecturers");
         } finally {
@@ -214,23 +204,22 @@ const ManageLecturers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-1 flex-wrap">
-                                                    {lec.subjects.map(sub => (
+                                                    {lec.subjects?.map(sub => (
                                                         <span key={sub} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs text-gray-600 font-medium">
                                                             {sub}
                                                         </span>
-                                                    ))}
-                                                    <span className="text-xs text-gray-400 mt-0.5">+2 more</span>
+                                                    )) || <span className="text-xs text-gray-400">No subjects assigned</span>}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3 w-32">
                                                     <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full ${lec.weeklyHours > 18 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                                            style={{ width: `${(lec.weeklyHours / lec.maxHours) * 100}%` }}
+                                                            className={`h-full rounded-full ${(lec.weeklyHours ?? 0) > 18 ? 'bg-orange-500' : 'bg-green-500'}`}
+                                                            style={{ width: `${((lec.weeklyHours ?? 0) / (lec.maxHours ?? 20)) * 100}%` }}
                                                         ></div>
                                                     </div>
-                                                    <span className="text-xs font-bold text-gray-600">{lec.weeklyHours} / {lec.maxHours}</span>
+                                                    <span className="text-xs font-bold text-gray-600">{lec.weeklyHours ?? 0} / {lec.maxHours ?? 20}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
