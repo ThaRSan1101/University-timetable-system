@@ -5,6 +5,7 @@ class Course(models.Model):
     name = models.CharField(max_length=100) # e.g. Computer Science
     code = models.CharField(max_length=20, unique=True)
     faculty = models.CharField(max_length=100, default='General') # Grouping by Faculty
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

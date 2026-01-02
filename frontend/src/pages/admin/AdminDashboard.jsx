@@ -15,6 +15,8 @@ const AdminDashboard = () => {
     const [currentSemester, setCurrentSemester] = useState(1);
     const [academicYear, setAcademicYear] = useState('2024/2025');
     const [showSemesterModal, setShowSemesterModal] = useState(false);
+    const [conflicts, setConflicts] = useState([]);
+    const [resolvingConflicts, setResolvingConflicts] = useState(false);
     const [stats, setStats] = useState([
         { title: 'Total Courses', value: '0', trend: 'Updated', icon: 'book', color: 'blue' },
         { title: 'Registered Lecturers', value: '0', trend: 'Updated', icon: 'users', color: 'purple' },
@@ -122,6 +124,7 @@ const AdminDashboard = () => {
         setMessage('');
         setProgress(0);
         setShowPublishButton(false);
+        setConflicts([]);
 
         // Mock progress animation for better UX
         const interval = setInterval(() => {
@@ -137,21 +140,44 @@ const AdminDashboard = () => {
             setProgress(100);
 
             if (response.data.status === 'success') {
-                setMessage('Timetable generated successfully!');
+                setMessage('✅ Timetable generated successfully! No conflicts detected.');
                 setShowPublishButton(true);
+                setConflicts([]);
                 // Refresh the timetable preview
                 fetchStats();
                 setTimeout(() => setGenerating(false), 2000);
-            } else {
-                setMessage(`Generated with conflicts: ${response.data.unscheduled.length} unscheduled items.`);
+            } else if (response.data.status === 'partial_success') {
+                const unscheduled = response.data.unscheduled || [];
+                setConflicts(unscheduled);
+                setMessage(`⚠️ Generated with ${unscheduled.length} conflicts. Check "Attention Needed" section below.`);
                 // Refresh to show what WAS scheduled
                 fetchStats();
                 setGenerating(false);
             }
-        } catch {
+        } catch (error) {
             clearInterval(interval);
-            setMessage('Error generating timetable.');
+            setMessage('❌ Error generating timetable: ' + (error.response?.data?.message || error.message));
             setGenerating(false);
+        }
+    };
+
+    const handleResolveConflicts = async () => {
+        setResolvingConflicts(true);
+        try {
+            // Call backend to auto-resolve conflicts
+            const response = await api.post('timetable/resolve-conflicts/');
+
+            if (response.data.status === 'success') {
+                setMessage('✅ Conflicts resolved successfully!');
+                setConflicts([]);
+                fetchStats();
+            } else {
+                setMessage('⚠️ Some conflicts could not be auto-resolved.');
+            }
+        } catch (error) {
+            setMessage('❌ Error resolving conflicts: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setResolvingConflicts(false);
         }
     };
 
@@ -265,80 +291,100 @@ const AdminDashboard = () => {
 
                     {/* Bottom Section */}
                     <div className="space-y-8">
-                        {/* Attention Needed */}
+                        {/* Attention Needed - Dynamic Conflicts */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[400px]">
                             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                                 <div className="flex items-center gap-3">
                                     <h3 className="font-bold text-gray-900">Attention Needed</h3>
-                                    <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">3 Issues</span>
+                                    {conflicts.length > 0 ? (
+                                        <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+                                            {conflicts.length} Issue{conflicts.length > 1 ? 's' : ''}
+                                        </span>
+                                    ) : (
+                                        <span className="bg-green-100 text-green-600 text-xs font-bold px-2 py-1 rounded-full">
+                                            All Clear
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex gap-2 text-gray-400">
-                                    <button className="hover:text-gray-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg></button>
-                                    <button className="hover:text-gray-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg></button>
-                                </div>
+                                {conflicts.length > 0 && (
+                                    <button
+                                        onClick={handleResolveConflicts}
+                                        disabled={resolvingConflicts}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold text-sm flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {resolvingConflicts ? (
+                                            <>
+                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Resolving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Auto-Resolve All
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
 
                             <div className="flex-1 overflow-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-blue-50 text-xs text-blue-900 uppercase font-bold border-b border-blue-100">
-                                            <th className="px-6 py-4">Severity</th>
-                                            <th className="px-6 py-4">Conflict Type</th>
-                                            <th className="px-6 py-4">Details</th>
-                                            <th className="px-6 py-4 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Critical
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Double Booking</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Room 304 (Lab)</p>
-                                                <p className="text-xs text-gray-500">CS101 & ENG202 on Mon 9AM</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-blue-600 hover:text-blue-800 text-sm font-bold">Resolve</button>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> Moderate
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Capacity Overflow</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Auditorium A</p>
-                                                <p className="text-xs text-gray-500">Course enrollment (120) {'>'} Room Cap (100)</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-blue-600 hover:text-blue-800 text-sm font-bold">Resolve</button>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Low
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Soft Constraint</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Prof. Smith</p>
-                                                <p className="text-xs text-gray-500">Preferred no classes after 4PM</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-gray-400 hover:text-gray-600 text-sm font-bold">Ignore</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-4 border-t border-gray-100 text-center">
-                                <button className="text-sm text-gray-500 font-semibold hover:text-gray-700 transition-colors">View All Conflicts</button>
+                                {conflicts.length > 0 ? (
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-blue-50 text-xs text-blue-900 uppercase font-bold border-b border-blue-100">
+                                                <th className="px-6 py-4">Subject</th>
+                                                <th className="px-6 py-4">Course & Year</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {conflicts.map((conflict, index) => (
+                                                <tr key={index} className="hover:bg-gray-50 group transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <p className="text-sm font-bold text-gray-900">{conflict.subject}</p>
+                                                        <p className="text-xs text-gray-500">{conflict.code}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <p className="text-sm font-semibold text-gray-700">{conflict.course}</p>
+                                                        <p className="text-xs text-gray-500">Year {conflict.year} • Semester {conflict.semester}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">
+                                                                {conflict.scheduled}/{conflict.needed}h
+                                                            </span>
+                                                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-bold">
+                                                                -{conflict.missing}h
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-start gap-2">
+                                                            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                            </svg>
+                                                            <p className="text-xs text-gray-600">{conflict.reason}</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                                        <svg className="w-16 h-16 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <h4 className="text-lg font-bold text-gray-900 mb-2">No Conflicts Detected</h4>
+                                        <p className="text-sm text-gray-500">All subjects have been successfully scheduled!</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {/* University Schedule Preview */}
@@ -534,8 +580,8 @@ const AdminDashboard = () => {
                             <button
                                 onClick={() => handleChangeSemester(1)}
                                 className={`w-full p-3 rounded-lg text-left transition-all mb-2 ${currentSemester === 1
-                                        ? 'bg-blue-500 text-white'
-                                        : 'hover:bg-gray-100'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="font-bold text-sm">Semester 1</div>
@@ -548,8 +594,8 @@ const AdminDashboard = () => {
                             <button
                                 onClick={() => handleChangeSemester(2)}
                                 className={`w-full p-3 rounded-lg text-left transition-all ${currentSemester === 2
-                                        ? 'bg-blue-500 text-white'
-                                        : 'hover:bg-gray-100'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="font-bold text-sm">Semester 2</div>
@@ -562,6 +608,9 @@ const AdminDashboard = () => {
                     </div>
                 </>
             )}
+
+            {/* Conflicts Modal Removed - Moved to Attention Needed Section */}
+
         </div>
     );
 };

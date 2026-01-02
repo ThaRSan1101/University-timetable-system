@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status  
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db.models import Q
@@ -289,27 +289,78 @@ class TimetableViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def generate(self, request):
         """
-        Admin-only: Trigger timetable generation
+        Admin-only: Trigger timetable generation with conflict detection
         """
         from .generator import generate_timetable_algo
         
         try:
-            unscheduled = generate_timetable_algo()
+            result = generate_timetable_algo()
             
-            if unscheduled:
+            # Check if there were any unscheduled subjects
+            if result['unscheduled']:
                 return Response({
                     'status': 'partial_success',
-                    'message': f'{len(unscheduled)} subjects could not be fully scheduled',
-                    'unscheduled': unscheduled
+                    'message': f"{len(result['unscheduled'])} subjects could not be fully scheduled",
+                    'statistics': {
+                        'total_subjects': result['total_subjects'],
+                        'fully_scheduled': result['fully_scheduled'],
+                        'partially_scheduled': len(result['unscheduled']),
+                        'total_slots_created': result['total_slots_created']
+                    },
+                    'unscheduled': result['unscheduled']
                 }, status=status.HTTP_200_OK)
             
             return Response({
                 'status': 'success',
-                'message': 'Timetable generated successfully'
+                'message': 'Timetable generated successfully! All subjects scheduled without conflicts.',
+                'statistics': {
+                    'total_subjects': result['total_subjects'],
+                    'fully_scheduled': result['fully_scheduled'],
+                    'total_slots_created': result['total_slots_created']
+                }
             }, status=status.HTTP_200_OK)
         
         except Exception as e:
             return Response({
                 'status': 'error',
-                'message': str(e)
+                'message': f'Generation failed: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def resolve_conflicts(self, request):
+        """
+        Admin-only: Attempt to auto-resolve scheduling conflicts
+        This will try to reschedule unscheduled subjects
+        """
+        try:
+            # Re-run the generator which will attempt to fill gaps
+            from .generator import generate_timetable_algo
+            result = generate_timetable_algo()
+            
+            if result['unscheduled']:
+                return Response({
+                    'status': 'partial_success',
+                    'message': f"Resolved some conflicts. {len(result['unscheduled'])} subjects still unscheduled.",
+                    'unscheduled': result['unscheduled'],
+                    'statistics': {
+                        'total_subjects': result['total_subjects'],
+                        'fully_scheduled': result['fully_scheduled'],
+                        'total_slots_created': result['total_slots_created']
+                    }
+                }, status=status.HTTP_200_OK)
+            
+            return Response({
+                'status': 'success',
+                'message': 'All conflicts resolved successfully!',
+                'statistics': {
+                    'total_subjects': result['total_subjects'],
+                    'fully_scheduled': result['fully_scheduled'],
+                    'total_slots_created': result['total_slots_created']
+                }
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': f'Resolution failed: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

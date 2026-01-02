@@ -463,15 +463,22 @@ def seed():
             }
         )
 
+
     print("Generating Timetable...")
-    unscheduled = generate_timetable_algo()
+    result = generate_timetable_algo()
     
-    if unscheduled:
-        print(f"Warning: {len(unscheduled)} subjects could not be fully scheduled.")
-        for item in unscheduled:
-            print(f" - {item['subject']}: Scheduled {item['scheduled']}/{item['needed']} hours")
+    print(f" -> Total Subjects: {result['total_subjects']}")
+    print(f" -> Fully Scheduled: {result['fully_scheduled']}")
+    print(f" -> Total Slots Created: {result['total_slots_created']}")
+    
+    if result['unscheduled']:
+        print(f"\n⚠️  Warning: {len(result['unscheduled'])} subjects could not be fully scheduled:")
+        for item in result['unscheduled']:
+            print(f"   - {item['subject']} ({item['code']}): {item['scheduled']}/{item['needed']} hours")
+            print(f"     Reason: {item['reason']}")
     else:
-        print("Success! Timetable generated with 0 conflicts.")
+        print("\n✅ Success! Timetable generated with 0 conflicts.")
+
 
 if __name__ == '__main__':
     seed()
