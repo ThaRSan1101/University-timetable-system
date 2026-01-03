@@ -5,7 +5,7 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 from .models import TimetableSlot
 from .serializers import TimetableSlotSerializer
-from academics.models import Subject
+from academics.models import Subject, SystemSettings
 
 
 class TimetableViewSet(viewsets.ModelViewSet):
@@ -19,8 +19,16 @@ class TimetableViewSet(viewsets.ModelViewSet):
         - Students see their course timetable
         - Lecturers see their teaching schedule
         - Admins see everything
+        - Non-admins only see if published
         """
         user = self.request.user
+        
+        # Check publication status for non-admins
+        if user.role != 'admin':
+            settings = SystemSettings.get_settings()
+            if not settings.is_timetable_published:
+                return TimetableSlot.objects.none()
+
         queryset = TimetableSlot.objects.select_related(
             'subject', 'subject__course', 'subject__lecturer', 'classroom'
         ).all()

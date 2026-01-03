@@ -22,3 +22,21 @@ class TimetableSlot(models.Model):
 
     def __str__(self):
         return f"{self.day} {self.start_time}-{self.end_time}: {self.subject.name} in {self.classroom.room_number}"
+
+class TimetableStatus(models.Model):
+    is_published = models.BooleanField(default=False)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk and TimetableStatus.objects.exists():
+            # If you try to create a new one, update the existing one instead
+            return
+        return super(TimetableStatus, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Timetable Status: {'Published' if self.is_published else 'Draft'}"

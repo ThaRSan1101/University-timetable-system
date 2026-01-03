@@ -12,6 +12,8 @@ const AdminDashboard = () => {
     const [timetable, setTimetable] = useState({ days_data: [] });
     const [courses, setCourses] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('');
+    const [selectedYear, setSelectedYear] = useState(''); // New state for Year filter
+
     const [currentSemester, setCurrentSemester] = useState(1);
     const [academicYear, setAcademicYear] = useState('2024/2025');
     const [showSemesterModal, setShowSemesterModal] = useState(false);
@@ -24,6 +26,8 @@ const AdminDashboard = () => {
         { title: 'Pending Conflicts', value: '0', trend: 'Requires attention', icon: 'warning', color: 'red', warning: false },
     ]);
 
+    const [isPublished, setIsPublished] = useState(false);
+
     useEffect(() => {
         fetchCurrentSemester();
         fetchStats();
@@ -31,9 +35,11 @@ const AdminDashboard = () => {
 
     const fetchCurrentSemester = async () => {
         try {
-            const response = await api.get('settings/current-semester/');
+            // Corrected API endpoint to match backend router
+            const response = await api.get('settings/');
             setCurrentSemester(response.data.current_semester);
             setAcademicYear(response.data.academic_year);
+            setIsPublished(response.data.is_timetable_published);
         } catch (error) {
             console.error("Failed to fetch current semester", error);
         }
@@ -41,7 +47,7 @@ const AdminDashboard = () => {
 
     const handleChangeSemester = async (newSemester) => {
         try {
-            await api.post('settings/update-semester/', {
+            await api.post('settings/update_semester/', {
                 semester: newSemester,
                 academic_year: academicYear
             });
@@ -73,6 +79,13 @@ const AdminDashboard = () => {
 
             setTimetable(timetableRes.data || { days_data: [] });
 
+            // Show publish button if there are scheduled classes
+            // API returns { days: [...] }
+            const hasClasses = timetableRes.data?.days?.some(d => d.classes && d.classes.length > 0);
+            if (hasClasses) {
+                setShowPublishButton(true);
+            }
+
         } catch (error) {
             console.error("Failed to fetch dashboard stats", error);
         }
@@ -82,14 +95,36 @@ const AdminDashboard = () => {
     const timeSlots = Array.from({ length: 10 }, (_, i) => `${9 + i}:00`);
 
     const getDayClasses = (day) => {
-        // Find the day object in days_data
-        const dayData = timetable.days_data?.find(d => d.day === day);
-        return dayData?.classes || [];
+        // Find the day object in days array (API returns { days: [...] })
+        const dayData = timetable.days?.find(d => d.day === day);
+        if (!dayData?.classes) return [];
+
+        let filteredClasses = dayData.classes;
+
+        // Filter by selected course
+        if (selectedCourse) {
+            const courseObj = courses.find(c => String(c.id) === String(selectedCourse));
+            if (courseObj) {
+                filteredClasses = filteredClasses.filter(cls => cls.subject.course_name === courseObj.name);
+            }
+        }
+
+        // Filter by selected year
+        if (selectedYear) {
+            filteredClasses = filteredClasses.filter(cls => {
+                // Extract year from subject code e.g. CST101 -> 1
+                const code = cls.subject.code || '';
+                const yearChar = code.length > 3 ? code[3] : '';
+                return yearChar === selectedYear;
+            });
+        }
+
+        return filteredClasses;
     };
 
     const getClassPosition = (startTime) => {
         const [hours, minutes] = startTime.split(':').map(Number);
-        const startHour = 9;
+        const startHour = 9; // UI starts at 9
         return ((hours - startHour) * 60 + (minutes || 0)) / 60;
     };
 
@@ -184,12 +219,15 @@ const AdminDashboard = () => {
     const handlePublish = async () => {
         setPublishing(true);
         try {
-            // Mock API call to publish
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setMessage('Schedule published successfully to all users!');
-            setShowPublishButton(false);
-        } catch {
-            setMessage('Failed to publish schedule.');
+            const newStatus = !isPublished;
+            const response = await api.post('settings/publish_timetable/', {
+                publish: newStatus
+            });
+            setIsPublished(response.data.is_timetable_published);
+            setMessage(newStatus ? 'Schedule published successfully to all users!' : 'Schedule unpublished successfully.');
+        } catch (error) {
+            console.error("Publish error", error);
+            setMessage('Failed to update publication status.');
         } finally {
             setPublishing(false);
         }
@@ -222,10 +260,10 @@ const AdminDashboard = () => {
                                 <button
                                     onClick={handlePublish}
                                     disabled={publishing}
-                                    className="px-4 py-2 bg-green-600 rounded-lg text-sm font-semibold text-white hover:bg-green-700 flex items-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-70"
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold text-white flex items-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-70 ${isPublished ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                                    {publishing ? 'Publishing...' : 'Publish Schedule'}
+                                    {publishing ? 'Processing...' : (isPublished ? 'Unpublish Schedule' : 'Publish Schedule')}
                                 </button>
                             )}
 
@@ -242,52 +280,56 @@ const AdminDashboard = () => {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        {stats.map((stat, idx) => (
-                            <div key={idx} className={`bg-white p-6 rounded-xl border ${stat.warning ? 'border-red-200 border-l-4 border-l-red-500' : 'border-gray-200'} shadow-sm transition-all hover:shadow-md`}>
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <p className="text-gray-500 text-sm font-medium mb-1">{stat.title}</p>
-                                        <h3 className="text-3xl font-bold text-blue-900">{stat.value}</h3>
+                        {
+                            stats.map((stat, idx) => (
+                                <div key={idx} className={`bg-white p-6 rounded-xl border ${stat.warning ? 'border-red-200 border-l-4 border-l-red-500' : 'border-gray-200'} shadow-sm transition-all hover:shadow-md`}>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-gray-500 text-sm font-medium mb-1">{stat.title}</p>
+                                            <h3 className="text-3xl font-bold text-blue-900">{stat.value}</h3>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-100">
+                                            {stat.icon === 'book' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.247 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                                            {stat.icon === 'users' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+                                            {stat.icon === 'building' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>}
+                                            {stat.icon === 'warning' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                                        </div>
                                     </div>
-                                    <div className="p-2.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-100">
-                                        {stat.icon === 'book' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.247 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                                        {stat.icon === 'users' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-                                        {stat.icon === 'building' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>}
-                                        {stat.icon === 'warning' && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-                                    </div>
+                                    <p className={`text-xs font-semibold ${stat.warning ? 'text-red-500' : 'text-blue-600'}`}>
+                                        {stat.warning && <span className="mr-1">!</span>}
+                                        {stat.trend}
+                                    </p>
                                 </div>
-                                <p className={`text-xs font-semibold ${stat.warning ? 'text-red-500' : 'text-blue-600'}`}>
-                                    {stat.warning && <span className="mr-1">!</span>}
-                                    {stat.trend}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
+                            ))
+                        }
+                    </div >
 
                     {/* Generator Progress - Only show when generating or recently finished */}
-                    {(generating || message) && (
-                        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-8">
-                            <div className="flex justify-between items-center mb-4">
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 rounded-lg ${generating ? 'bg-blue-100 text-blue-900 animate-spin' : 'bg-green-100 text-green-700'}`}>
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    {
+                        (generating || message) && (
+                            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-8">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 rounded-lg ${generating ? 'bg-blue-100 text-blue-900 animate-spin' : 'bg-green-100 text-green-700'}`}>
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-blue-900">{generating ? 'Generating Timetable Draft v3.1' : message}</h3>
+                                            <p className="text-sm text-gray-500 font-medium">Genetic Algorithm • Iteration {Math.floor(progress * 100)}/10000</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-blue-900">{generating ? 'Generating Timetable Draft v3.1' : message}</h3>
-                                        <p className="text-sm text-gray-500 font-medium">Genetic Algorithm • Iteration {Math.floor(progress * 100)}/10000</p>
-                                    </div>
+                                    <span className="text-2xl font-bold text-blue-900">{progress}%</span>
                                 </div>
-                                <span className="text-2xl font-bold text-blue-900">{progress}%</span>
+                                <div className="w-full bg-blue-50 rounded-full h-2.5 mb-2 overflow-hidden border border-blue-100">
+                                    <div className="bg-blue-900 h-2.5 rounded-full transition-all duration-300 shadow-sm" style={{ width: `${progress}%` }}></div>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                    <span>Started: {new Date().toLocaleTimeString()} by Admin</span>
+                                    <span>Est. time remaining: {generating ? '2m 30s' : 'Completed'}</span>
+                                </div>
                             </div>
-                            <div className="w-full bg-blue-50 rounded-full h-2.5 mb-2 overflow-hidden border border-blue-100">
-                                <div className="bg-blue-900 h-2.5 rounded-full transition-all duration-300 shadow-sm" style={{ width: `${progress}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                <span>Started: {new Date().toLocaleTimeString()} by Admin</span>
-                                <span>Est. time remaining: {generating ? '2m 30s' : 'Completed'}</span>
-                            </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     {/* Bottom Section */}
                     <div className="space-y-8">
@@ -433,12 +475,26 @@ const AdminDashboard = () => {
                                             </option>
                                         ))}
                                     </select>
-                                    <select
-                                        onClick={() => setShowSemesterModal(true)}
 
+                                    <select
+                                        value={selectedYear}
+                                        onChange={(e) => setSelectedYear(e.target.value)}
                                         className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all"
                                     >
+                                        <option value="">All Years</option>
+                                        <option value="1">Year 1</option>
+                                        <option value="2">Year 2</option>
+                                        <option value="3">Year 3</option>
+                                        <option value="4">Year 4</option>
                                     </select>
+
+                                    <button
+                                        onClick={() => setShowSemesterModal(true)}
+                                        className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none hover:bg-blue-100 transition-all flex items-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        Sem {currentSemester}
+                                    </button>
                                 </div>
                             </div>
 
@@ -564,61 +620,63 @@ const AdminDashboard = () => {
                         </div>
                     </div>
 
-                </main>
-            </div>
+                </main >
+            </div >
 
             {/* Semester Dropdown Menu */}
-            {showSemesterModal && (
-                <>
-                    {/* Backdrop to close dropdown */}
-                    <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setShowSemesterModal(false)}
-                    ></div>
+            {
+                showSemesterModal && (
+                    <>
+                        {/* Backdrop to close dropdown */}
+                        <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setShowSemesterModal(false)}
+                        ></div>
 
-                    {/* Dropdown positioned at top-right */}
-                    <div className="fixed top-20 right-8 z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-64 overflow-hidden">
-                        <div className="p-3 bg-blue-50 border-b border-blue-100">
-                            <h4 className="font-bold text-blue-900 text-sm">Change Active Semester</h4>
-                            <p className="text-xs text-gray-600 mt-1">Select semester for the system</p>
+                        {/* Dropdown positioned at top-right */}
+                        <div className="fixed top-20 right-8 z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-64 overflow-hidden">
+                            <div className="p-3 bg-blue-50 border-b border-blue-100">
+                                <h4 className="font-bold text-blue-900 text-sm">Change Active Semester</h4>
+                                <p className="text-xs text-gray-600 mt-1">Select semester for the system</p>
+                            </div>
+
+                            <div className="p-2">
+                                <button
+                                    onClick={() => handleChangeSemester(1)}
+                                    className={`w-full p-3 rounded-lg text-left transition-all mb-2 ${currentSemester === 1
+                                        ? 'bg-blue-500 text-white'
+                                        : 'hover:bg-gray-100'
+                                        }`}
+                                >
+                                    <div className="font-bold text-sm">Semester 1</div>
+                                    <div className={`text-xs ${currentSemester === 1 ? 'text-blue-100' : 'text-gray-500'}`}>
+                                        {academicYear}
+                                        {currentSemester === 1 && ' • Active'}
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => handleChangeSemester(2)}
+                                    className={`w-full p-3 rounded-lg text-left transition-all ${currentSemester === 2
+                                        ? 'bg-blue-500 text-white'
+                                        : 'hover:bg-gray-100'
+                                        }`}
+                                >
+                                    <div className="font-bold text-sm">Semester 2</div>
+                                    <div className={`text-xs ${currentSemester === 2 ? 'text-blue-100' : 'text-gray-500'}`}>
+                                        {academicYear}
+                                        {currentSemester === 2 && ' • Active'}
+                                    </div>
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="p-2">
-                            <button
-                                onClick={() => handleChangeSemester(1)}
-                                className={`w-full p-3 rounded-lg text-left transition-all mb-2 ${currentSemester === 1
-                                    ? 'bg-blue-500 text-white'
-                                    : 'hover:bg-gray-100'
-                                    }`}
-                            >
-                                <div className="font-bold text-sm">Semester 1</div>
-                                <div className={`text-xs ${currentSemester === 1 ? 'text-blue-100' : 'text-gray-500'}`}>
-                                    {academicYear}
-                                    {currentSemester === 1 && ' • Active'}
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => handleChangeSemester(2)}
-                                className={`w-full p-3 rounded-lg text-left transition-all ${currentSemester === 2
-                                    ? 'bg-blue-500 text-white'
-                                    : 'hover:bg-gray-100'
-                                    }`}
-                            >
-                                <div className="font-bold text-sm">Semester 2</div>
-                                <div className={`text-xs ${currentSemester === 2 ? 'text-blue-100' : 'text-gray-500'}`}>
-                                    {academicYear}
-                                    {currentSemester === 2 && ' • Active'}
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </>
-            )}
+                    </>
+                )
+            }
 
             {/* Conflicts Modal Removed - Moved to Attention Needed Section */}
 
-        </div>
+        </div >
     );
 };
 

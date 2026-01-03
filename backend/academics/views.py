@@ -123,6 +123,7 @@ class SystemSettingsViewSet(viewsets.ViewSet):
         return Response({
             'current_semester': settings.current_semester,
             'academic_year': settings.academic_year,
+            'is_timetable_published': settings.is_timetable_published,
             'updated_at': settings.updated_at
         })
     
@@ -157,6 +158,36 @@ class SystemSettingsViewSet(viewsets.ViewSet):
             'message': 'Semester updated successfully',
             'current_semester': settings.current_semester,
             'academic_year': settings.academic_year
+        })
+
+    @action(detail=False, methods=['post'])
+    def publish_timetable(self, request):
+        """
+        Toggle timetable publication status
+        Only admins can do this
+        """
+        if request.user.role != 'admin':
+            return Response(
+                {'error': 'Only admins can publish timetable'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        publish = request.data.get('publish')
+        
+        if publish is None:
+             return Response(
+                {'error': 'Publish status is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        settings = SystemSettings.get_settings()
+        settings.is_timetable_published = publish
+        settings.save()
+        
+        status_msg = "published" if publish else "unpublished"
+        return Response({
+            'message': f'Timetable {status_msg} successfully',
+            'is_timetable_published': settings.is_timetable_published
         })
 
 
