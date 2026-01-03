@@ -68,7 +68,12 @@ class TimetableViewSet(viewsets.ModelViewSet):
             return Response({
                 'days': [],
                 'next_class': None,
-                'view': view_type
+                'view': view_type,
+                'time_range': {
+                    'start': '08:00',
+                    'end': '19:00',
+                    'slots': self._generate_time_slots()
+                }
             })
         
         # Process timetable data
