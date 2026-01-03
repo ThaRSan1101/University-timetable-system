@@ -1,420 +1,408 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * StudentDashboard - Pure Display Component
+ * 
+ * NO LOGIC HERE - Just displays backend-processed data
+ * All filtering, sorting, calculations done by backend
+ */
 const StudentDashboard = () => {
     const { user } = useAuth();
-    const [timetable, setTimetable] = useState([]);
+    const [timetableData, setTimetableData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState(null);
-    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
-
-    const dummyTimetable = [
-        {
-            id: 1,
-            day: 'Monday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Advanced Algorithms', lecturer_name: 'Dr. Aruna Perera' },
-            classroom_details: { room_number: 'Lab 01' }
-        },
-        {
-            id: 2,
-            day: 'Monday',
-            start_time: '13:00',
-            end_time: '15:00',
-            subject_details: { name: 'Database Systems', lecturer_name: 'Prof. Kamal Silva' },
-            classroom_details: { room_number: 'Hall A' }
-        },
-        {
-            id: 3,
-            day: 'Tuesday',
-            start_time: '10:00',
-            end_time: '12:00',
-            subject_details: { name: 'Machine Learning', lecturer_name: 'Dr. Sarah Smith' },
-            classroom_details: { room_number: 'Room 304' }
-        },
-        {
-            id: 4,
-            day: 'Wednesday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Software Engineering', lecturer_name: 'Mr. John Doe' },
-            classroom_details: { room_number: 'Web Lab' }
-        },
-        {
-            id: 5,
-            day: 'Thursday',
-            start_time: '14:00',
-            end_time: '16:00',
-            subject_details: { name: 'Computer Networks', lecturer_name: 'Dr. Saman Kumara' },
-            classroom_details: { room_number: 'Hall B' }
-        },
-        {
-            id: 6,
-            day: 'Friday',
-            start_time: '11:00',
-            end_time: '13:00',
-            subject_details: { name: 'Mobile Computing', lecturer_name: 'Ms. Janaki Liyanage' },
-            classroom_details: { room_number: 'Lab 02' }
-        }
-    ];
+    const [viewMode, setViewMode] = useState('calendar');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [availableSemesters, setAvailableSemesters] = useState([]);
+    const [selectedSemester, setSelectedSemester] = useState(null);
 
     useEffect(() => {
         const fetchTimetable = async () => {
-            try {
-                // Use profile from user context if available, otherwise fetch it
-                let studentProfile = user.student_profile;
+            if (!user) return;
 
-                if (!studentProfile) {
-                    const profileRes = await api.get(`students/?user=${user.id}`);
-                    if (profileRes.data.length > 0) {
-                        studentProfile = profileRes.data[0];
-                    }
+            try {
+                // Get student's course from profile
+                const courseId = user.student_profile?.course;
+
+                if (!courseId) {
+                    console.error("Student has no course assigned");
+                    setLoading(false);
+                    return;
                 }
 
-                if (studentProfile) {
-                    setProfile(studentProfile);
-                    const response = await api.get(`timetable/?course_id=${studentProfile.course}&year=${studentProfile.year}&semester=${studentProfile.semester}`);
-                    if (response.data && response.data.length > 0) {
-                        setTimetable(response.data);
-                    } else {
-                        setTimetable(dummyTimetable);
-                    }
-                } else {
-                    setTimetable(dummyTimetable);
+                // Fetch FORMATTED timetable from backend
+                // Backend does ALL processing: grouping, sorting, coloring, etc.
+                const response = await api.get(`timetable/formatted/?course_id=${courseId}&view=${viewMode}`);
+                setTimetableData(response.data);
+
+                // Extract available semesters from the fetched data
+                const semesters = [...new Set(response.data.days.flatMap(day =>
+                    day.classes.map(cls => cls.subject.semester)
+                ))].sort((a, b) => a - b);
+
+                setAvailableSemesters(semesters);
+
+                // Set default semester selection if none selected
+                if (semesters.length > 0 && !selectedSemester) {
+                    setSelectedSemester(semesters[0]);
                 }
             } catch (error) {
-                console.error("Error fetching timetable, using dummy data", error);
-                setTimetable(dummyTimetable);
+                console.error("Error fetching timetable", error);
             } finally {
                 setLoading(false);
             }
         };
-        if (user) fetchTimetable();
-    }, [user]);
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const timeSlots = Array.from({ length: 10 }, (_, i) => `${9 + i}:00`);
+        fetchTimetable();
+    }, [user, viewMode]);
 
-    const getDayClasses = (day) => {
-        return timetable.filter(slot => slot.day === day);
-    };
+    // Derived state for filtered filteredDays to check if empty
+    const filteredDays = timetableData?.days.map(day => ({
+        ...day,
+        classes: day.classes.filter(cls => {
+            const matchesSearch = !searchTerm ||
+                cls.subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                cls.subject.code.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSemester = !selectedSemester || cls.subject.semester === parseInt(selectedSemester);
+            return matchesSearch && matchesSemester;
+        })
+    })) || [];
 
-    const getClassPosition = (startTime) => {
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const startHour = 9;
-        return ((hours - startHour) * 60 + (minutes || 0)) / 60;
-    };
-
-    const getClassDuration = (startTime, endTime) => {
-        const [startHours, startMinutes] = startTime.split(':').map(Number);
-        const [endHours, endMinutes] = endTime.split(':').map(Number);
-        return ((endHours * 60 + (endMinutes || 0)) - (startHours * 60 + (startMinutes || 0))) / 60;
-    };
-
-    const formatTime = (time) => {
-        if (!time) return '';
-        return time.slice(0, 5);
-    };
-
-    const getNextClass = () => {
-        const now = new Date();
-        const currentDay = days[now.getDay() - 1];
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        const todayClasses = getDayClasses(currentDay);
-        const upcoming = todayClasses
-            .filter(slot => slot.start_time > currentTime)
-            .sort((a, b) => a.start_time.localeCompare(b.start_time))[0];
-
-        if (upcoming) {
-            const [uH, uM] = upcoming.start_time.split(':').map(Number);
-            const [cH, cM] = currentTime.split(':').map(Number);
-            const minutes = (uH * 60 + uM) - (cH * 60 + cM);
-            return { ...upcoming, minutesUntil: minutes };
-        }
-        return null;
-    };
-
-    const colors = [
-        'bg-blue-100 border-blue-500 text-blue-700',
-        'bg-green-100 border-green-500 text-green-700',
-        'bg-purple-100 border-purple-500 text-purple-700',
-        'bg-orange-100 border-orange-500 text-orange-700',
-        'bg-pink-100 border-pink-500 text-pink-700',
-        'bg-teal-100 border-teal-500 text-teal-700',
-    ];
-
-    const getColorForSubject = (subjectName) => {
-        const hash = subjectName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return colors[hash % colors.length];
-    };
-
-    const nextClass = getNextClass();
+    // Check if there are any classes at all in the current selection
+    const hasAnyClasses = filteredDays.some(day => day.classes.length > 0);
 
     const handleExport = () => {
-        const content = "Timetable Data\n" + timetable.map(t => `${t.day}: ${t.start_time}-${t.end_time} ${t.subject_details.name}`).join("\n");
+        if (!timetableData) return;
+
+        let content = "Student Timetable\n\n";
+        filteredDays.forEach(day => {
+            if (day.classes.length > 0) {
+                content += `${day.day}:\n`;
+                day.classes.forEach(cls => {
+                    content += `  ${cls.time.start}-${cls.time.end} ${cls.subject.name} (${cls.subject.code}) - Room ${cls.classroom.room_number}\n`;
+                });
+                content += '\n';
+            }
+        });
+
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'timetable.txt';
+        link.download = 'student_timetable.txt';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mx-auto mb-4"></div>
-                    <p className="text-gray-600 text-lg">Loading your timetable...</p>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
             <Sidebar />
 
             <div className="flex-1 overflow-auto ml-72">
-                <div className="p-8">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">My Semester Timetable</h1>
-                            <p className="text-gray-500 mt-1">Fall Semester 2024 • Week 5</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-900 text-white rounded-lg font-medium transition-all shadow-md active:scale-95"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                Export
-                            </button>
+                {loading ? (
+                    <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mx-auto mb-4"></div>
+                            <p className="text-gray-600 font-medium">Loading your schedule...</p>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        {/* Filters Sidebar */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                        </svg>
-                                        Filters
-                                    </div>
-                                    <button className="text-blue-900 text-sm font-bold hover:underline">Reset</button>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">SEMESTER</label>
-                                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none">
-                                        <option>First Semester</option>
-                                        <option>Second Semester</option>
-                                    </select>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">VIEW MODE</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setViewMode('calendar')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'calendar'
-                                                ? 'bg-blue-900 text-white shadow-lg'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            Calendar
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('list')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'list'
-                                                ? 'bg-blue-900 text-white shadow-lg'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                            </svg>
-                                            List
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">FIND MODULE</label>
-                                    <div className="relative">
-                                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. CS101"
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none"
-                                        />
-                                    </div>
-                                </div>
+                ) : !timetableData || !timetableData.time_range || !timetableData.time_range.slots || !timetableData.days ? (
+                    <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                            <p className="text-gray-600 font-medium mb-2">No timetable data available</p>
+                            <p className="text-gray-400 text-sm">Please contact your administrator to generate a timetable.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-8">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">My Class Schedule</h1>
+                                <p className="text-gray-500 mt-1">
+                                    {selectedSemester ? `Semester ${selectedSemester}` : ' All Semesters'} • Academic Year 2024-2025
+                                </p>
                             </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white rounded-xl font-semibold transition-all shadow-lg hover:bg-blue-800"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Export Schedule
+                                </button>
+                            </div>
+                        </div>
 
-                            {nextClass && (
-                                <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group mt-6">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                        <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                            {/* Sidebar Controls */}
+                            <div className="lg:col-span-1 space-y-6">
+                                {/* Filters Card */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-2">
+                                            <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                            </svg>
+                                            <h3 className="font-bold text-gray-900 text-lg">Filters</h3>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('calendar');
+                                                setSearchTerm('');
+                                                if (availableSemesters.length > 0) setSelectedSemester(availableSemesters[0]);
+                                            }}
+                                            className="text-sm font-bold text-blue-900 hover:text-blue-700"
+                                        >
+                                            Reset
+                                        </button>
                                     </div>
-                                    <div className="relative z-10">
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-blue-300 mb-4 flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                                            Current Status
-                                        </p>
-                                        <p className="text-sm font-medium text-blue-100 mb-1">Up Next in {nextClass.minutesUntil} mins</p>
-                                        <h4 className="text-xl font-bold mb-4 leading-tight">{nextClass.subject_details.name}</h4>
-                                        <div className="flex items-center gap-3 text-xs font-semibold bg-white/10 p-3 rounded-xl border border-white/10">
-                                            <div className="flex flex-col">
-                                                <span className="text-blue-300 uppercase text-[9px]">Venue</span>
-                                                <span>Room {nextClass.classroom_details.room_number}</span>
+
+                                    {/* Semester Filter */}
+                                    <div className="mb-6">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Semester</label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedSemester || ''}
+                                                onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+                                                disabled={availableSemesters.length === 0}
+                                                className="w-full appearance-none bg-white border border-gray-200 text-gray-900 font-semibold rounded-xl px-4 py-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+                                            >
+                                                {availableSemesters.length === 0 ? (
+                                                    <option>No data available</option>
+                                                ) : (
+                                                    availableSemesters.map(sem => (
+                                                        <option key={sem} value={sem}>Semester {sem}</option>
+                                                    ))
+                                                )}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                                             </div>
-                                            <div className="w-[1px] h-8 bg-white/10 mx-1"></div>
-                                            <div className="flex flex-col overflow-hidden">
-                                                <span className="text-blue-300 uppercase text-[9px]">Lecturer</span>
-                                                <span className="truncate">{nextClass.subject_details.lecturer_name}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* View Mode */}
+                                    <div className="mb-6">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">View Mode</label>
+                                        <div className="flex gap-2 p-1 bg-gray-50 rounded-xl border border-gray-100">
+                                            <button
+                                                onClick={() => setViewMode('calendar')}
+                                                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-bold transition-all ${viewMode === 'calendar'
+                                                    ? 'bg-blue-900 text-white shadow-md'
+                                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                Calendar
+                                            </button>
+                                            <button
+                                                onClick={() => setViewMode('list')}
+                                                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-bold transition-all ${viewMode === 'list'
+                                                    ? 'bg-blue-900 text-white shadow-md'
+                                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                                List
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Find Module */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Find Module</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                placeholder="e.g. CS101"
+                                                className="w-full bg-white border border-gray-200 text-gray-900 font-medium rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400"
+                                            />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="lg:col-span-3">
-                            {viewMode === 'calendar' ? (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="grid grid-cols-6 border-b border-gray-200">
-                                        <div className="p-4 bg-gray-50"></div>
-                                        {days.map((day, index) => {
-                                            const date = new Date();
-                                            date.setDate(date.getDate() - date.getDay() + index + 1);
-                                            const isToday = date.toDateString() === new Date().toDateString();
-
-                                            return (
-                                                <div key={day} className="p-4 text-center border-l border-gray-200">
-                                                    <div className="text-xs text-gray-500 uppercase mb-1">{day.substring(0, 3)}</div>
-                                                    <div className={`text-2xl font-bold ${isToday ? 'bg-blue-900 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}>
-                                                        {date.getDate()}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div className="relative">
-                                        <div className="grid grid-cols-6">
-                                            <div className="border-r border-gray-200">
-                                                {timeSlots.map(time => (
-                                                    <div key={time} className="h-20 border-b border-gray-100 px-3 py-2 text-xs text-gray-500">
-                                                        {time}
-                                                    </div>
-                                                ))}
+                                {/* Next Class Card */}
+                                {timetableData.next_class && (
+                                    <div className="bg-blue-900 rounded-2xl p-6 text-white shadow-xl">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-blue-300 mb-4">
+                                            Up Next
+                                        </p>
+                                        <h4 className="text-xl font-bold mb-4">{timetableData.next_class.subject}</h4>
+                                        <div className="flex items-center gap-3 text-sm bg-white/10 p-3 rounded-xl">
+                                            <div className="flex flex-col">
+                                                <span className="text-blue-300 text-xs">Room</span>
+                                                <span>{timetableData.next_class.classroom}</span>
                                             </div>
+                                            <div className="w-px h-8 bg-white/10"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-blue-300 text-xs">Time</span>
+                                                <span>{timetableData.next_class.start_time}</span>
+                                            </div>
+                                            {timetableData.next_class.minutes_until && (
+                                                <>
+                                                    <div className="w-px h-8 bg-white/10"></div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-blue-300 text-xs">In</span>
+                                                        <span>{timetableData.next_class.minutes_until} min</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
-                                            {days.map(day => (
-                                                <div key={day} className="relative border-l border-gray-200">
-                                                    {timeSlots.map(time => (
-                                                        <div key={time} className="h-20 border-b border-gray-100"></div>
-                                                    ))}
-
-                                                    {getDayClasses(day).map(slot => {
-                                                        const top = getClassPosition(slot.start_time) * 80;
-                                                        const height = getClassDuration(slot.start_time, slot.end_time) * 80;
-                                                        const colorClass = getColorForSubject(slot.subject_details.name);
-
-                                                        return (
-                                                            <div
-                                                                key={slot.id}
-                                                                className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
-                                                                style={{ top: `${top}px`, height: `${height}px` }}
-                                                            >
-                                                                <div className="text-xs font-bold mb-1 truncate">
-                                                                    {slot.subject_details.name}
-                                                                </div>
-                                                                <div className="text-xs opacity-90 mb-1">
-                                                                    Room {slot.classroom_details.room_number}
-                                                                </div>
-                                                                <div className="text-xs opacity-75">
-                                                                    {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                            {/* Main Content */}
+                            <div className="lg:col-span-3">
+                                {viewMode === 'calendar' ? (
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                        {/* Calendar Header */}
+                                        <div className="grid grid-cols-6 border-b border-gray-100 bg-gray-50">
+                                            <div className="p-4 border-r border-gray-100"></div>
+                                            {timetableData.days.map((day, index) => (
+                                                <div key={day.day} className="p-4 text-center border-l border-gray-100">
+                                                    <div className="text-xs font-bold text-gray-400 uppercase">{day.day.substring(0, 3)}</div>
+                                                    <div className="text-2xl font-bold text-gray-700">{index + 1}</div>
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {days.map(day => {
-                                        const classes = getDayClasses(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
-                                        return (
-                                            <div key={day} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                                                    <h3 className="text-lg font-bold text-gray-900">{day}</h3>
+                                        {/* Calendar Grid */}
+                                        <div className="relative">
+                                            <div className="grid grid-cols-6">
+                                                {/* Time Column */}
+                                                <div className="border-r border-gray-100 bg-gray-50">
+                                                    {timetableData.time_range.slots.map(time => (
+                                                        <div key={time} className="h-20 border-b border-gray-50 px-4 py-3 text-xs font-bold text-gray-400">
+                                                            {time}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <div className="divide-y divide-gray-100">
-                                                    {classes.length > 0 ? (
-                                                        classes.map(slot => (
-                                                            <div key={slot.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center gap-6">
-                                                                <div className="w-24 flex-shrink-0">
-                                                                    <p className="text-lg font-bold text-blue-900">{formatTime(slot.start_time)}</p>
-                                                                    <p className="text-sm text-gray-500">to {formatTime(slot.end_time)}</p>
+
+                                                {/* Day Columns - Render filtered classes */}
+                                                {filteredDays.map(day => (
+                                                    <div key={day.day} className="relative border-l border-gray-100">
+                                                        {timetableData.time_range.slots.map(time => (
+                                                            <div key={time} className="h-20 border-b border-gray-50"></div>
+                                                        ))}
+
+                                                        {day.classes.map(cls => (
+                                                            <div
+                                                                key={cls.id}
+                                                                className={`absolute left-1 right-1 ${cls.display.color_class} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col overflow-hidden group`}
+                                                                style={{
+                                                                    top: `${cls.display.position_index * 80 + 2}px`,
+                                                                    height: `${cls.display.duration_blocks * 80 - 4}px`,
+                                                                    zIndex: 10
+                                                                }}
+                                                            >
+                                                                <div className="flex-1 min-h-0 flex flex-col gap-0.5">
+                                                                    <div className="text-[10px] font-extrabold opacity-70 uppercase tracking-wider">
+                                                                        {cls.subject.code}
+                                                                    </div>
+                                                                    <div className="text-xs font-bold leading-tight line-clamp-3">
+                                                                        {cls.subject.name}
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex-1">
-                                                                    <h4 className="text-md font-bold text-gray-900 mb-1">{slot.subject_details.name}</h4>
-                                                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                                                        <span className="flex items-center gap-1">
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                                                            {slot.subject_details.lecturer_name}
-                                                                        </span>
-                                                                        <span className="flex items-center gap-1">
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
-                                                                            Room {slot.classroom_details.room_number}
-                                                                        </span>
+
+                                                                <div className="mt-1 pt-1.5 border-t border-black/5 flex flex-col gap-0.5">
+                                                                    <div className="text-[10px] font-medium flex items-center gap-1 opacity-90">
+                                                                        <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                                        <span className="truncate">{cls.subject.lecturer_name || 'TBA'}</span>
+                                                                    </div>
+                                                                    <div className="text-[10px] font-medium flex items-center gap-1 opacity-90">
+                                                                        <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                                                        <span className="truncate">{cls.classroom.room_number}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="p-6 text-center text-gray-400 font-medium italic">
-                                                            No sessions scheduled for {day}
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {!hasAnyClasses && (
+                                            <div className="bg-white rounded-2xl p-12 text-center text-gray-500 border border-gray-200">
+                                                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <p className="text-lg font-medium">No classes found for this semester.</p>
+                                                <p>Try selecting a different semester from the filters.</p>
+                                            </div>
+                                        )}
+
+                                        {filteredDays.map(day => day.classes.length > 0 && (
+                                            <div key={day.day} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="px-8 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                                    <h3 className="text-lg font-bold text-gray-900">{day.day}</h3>
+                                                    <span className="text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1 rounded-full">
+                                                        {day.classes.length} Classes
+                                                    </span>
+                                                </div>
+                                                <div className="divide-y divide-gray-100">
+                                                    {day.classes.map(cls => (
+                                                        <div key={cls.id} className="p-8 hover:bg-gray-50 transition-all flex items-center gap-8">
+                                                            <div className="w-24 text-center">
+                                                                <p className="text-lg font-bold text-blue-900">{cls.time.start}</p>
+                                                                <p className="text-sm text-gray-500">to {cls.time.end}</p>
+                                                            </div>
+                                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-bold uppercase tracking-wider">
+                                                                            {cls.subject.code}
+                                                                        </span>
+                                                                    </div>
+                                                                    <h4 className="text-xl font-bold text-gray-900 mb-1">{cls.subject.name}</h4>
+                                                                    <p className="text-sm text-gray-500">{cls.subject.course_name}</p>
+                                                                </div>
+
+                                                                <div className="flex flex-col justify-center gap-2 text-sm text-gray-600">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-900">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="block text-xs font-bold text-gray-400 uppercase">Lecturer</span>
+                                                                            <span className="font-medium text-gray-900">{cls.subject.lecturer_name || 'TBA'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-900">
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="block text-xs font-bold text-gray-400 uppercase">Venue</span>
+                                                                            <span className="font-medium text-gray-900">Room {cls.classroom.room_number}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    )}
+                                                    ))}
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

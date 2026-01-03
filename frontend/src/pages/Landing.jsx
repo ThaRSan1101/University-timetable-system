@@ -1,6 +1,6 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import uwuLogo from '../assets/uwu.png';
 import studentsImg from '../assets/students.jpg';
 import lecturerImg from '../assets/lecturer.jpg';
@@ -8,10 +8,17 @@ import uwuHero from '../assets/uwu_hero.jpg';
 import register2 from '../assets/regiter2.jpg';
 
 const Landing = () => {
-    const { user, loading } = useAuth();
+    const { loading: authLoading, user } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navigate = useNavigate();
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    useEffect(() => {
+        if (!authLoading && user) {
+            navigate('/dashboard');
+        }
+    }, [user, authLoading, navigate]);
+
+    if (authLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
 
 

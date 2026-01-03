@@ -5,73 +5,86 @@ import AdminSidebar from '../../components/AdminSidebar';
 const AdminDashboard = () => {
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState('');
-    const [progress, setProgress] = useState(0); // Mock progress
+    const [progress, setProgress] = useState(0);
     const [showPublishButton, setShowPublishButton] = useState(false);
     const [publishing, setPublishing] = useState(false);
-    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
-    const [timetable, setTimetable] = useState([]);
-
-    const dummyTimetable = [
-        {
-            id: 1,
-            day: 'Monday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Advanced Algorithms', lecturer_name: 'Dr. Aruna Perera' },
-            classroom_details: { room_number: 'Lab 01' }
-        },
-        {
-            id: 2,
-            day: 'Monday',
-            start_time: '13:00',
-            end_time: '15:00',
-            subject_details: { name: 'Database Systems', lecturer_name: 'Prof. Kamal Silva' },
-            classroom_details: { room_number: 'Hall A' }
-        },
-        {
-            id: 3,
-            day: 'Tuesday',
-            start_time: '10:00',
-            end_time: '12:00',
-            subject_details: { name: 'Machine Learning', lecturer_name: 'Dr. Sarah Smith' },
-            classroom_details: { room_number: 'Room 304' }
-        },
-        {
-            id: 4,
-            day: 'Wednesday',
-            start_time: '09:00',
-            end_time: '11:00',
-            subject_details: { name: 'Software Engineering', lecturer_name: 'Mr. John Doe' },
-            classroom_details: { room_number: 'Web Lab' }
-        },
-        {
-            id: 5,
-            day: 'Thursday',
-            start_time: '14:00',
-            end_time: '16:00',
-            subject_details: { name: 'Computer Networks', lecturer_name: 'Dr. Saman Kumara' },
-            classroom_details: { room_number: 'Hall B' }
-        },
-        {
-            id: 6,
-            day: 'Friday',
-            start_time: '11:00',
-            end_time: '13:00',
-            subject_details: { name: 'Mobile Computing', lecturer_name: 'Ms. Janaki Liyanage' },
-            classroom_details: { room_number: 'Lab 02' }
-        }
-    ];
+    const [viewMode, setViewMode] = useState('calendar');
+    const [timetable, setTimetable] = useState({ days_data: [] });
+    const [courses, setCourses] = useState([]);
+    const [selectedCourse, setSelectedCourse] = useState('');
+    const [currentSemester, setCurrentSemester] = useState(1);
+    const [academicYear, setAcademicYear] = useState('2024/2025');
+    const [showSemesterModal, setShowSemesterModal] = useState(false);
+    const [conflicts, setConflicts] = useState([]);
+    const [resolvingConflicts, setResolvingConflicts] = useState(false);
+    const [stats, setStats] = useState([
+        { title: 'Total Courses', value: '0', trend: 'Updated', icon: 'book', color: 'blue' },
+        { title: 'Registered Lecturers', value: '0', trend: 'Updated', icon: 'users', color: 'purple' },
+        { title: 'Rooms Available', value: '0', trend: 'Utilization: 0%', icon: 'building', color: 'orange' },
+        { title: 'Pending Conflicts', value: '0', trend: 'Requires attention', icon: 'warning', color: 'red', warning: false },
+    ]);
 
     useEffect(() => {
-        // Fetch or set dummy
-        setTimetable(dummyTimetable);
+        fetchCurrentSemester();
+        fetchStats();
     }, []);
+
+    const fetchCurrentSemester = async () => {
+        try {
+            const response = await api.get('settings/current-semester/');
+            setCurrentSemester(response.data.current_semester);
+            setAcademicYear(response.data.academic_year);
+        } catch (error) {
+            console.error("Failed to fetch current semester", error);
+        }
+    };
+
+    const handleChangeSemester = async (newSemester) => {
+        try {
+            await api.post('settings/update-semester/', {
+                semester: newSemester,
+                academic_year: academicYear
+            });
+            setCurrentSemester(newSemester);
+            setShowSemesterModal(false);
+            fetchStats(); // Refresh data for new semester
+        } catch (error) {
+            console.error("Failed to update semester", error);
+            alert('Failed to update semester. Please try again.');
+        }
+    };
+
+    const fetchStats = async () => {
+        try {
+            const [coursesRes, lecturersRes, roomsRes, timetableRes] = await Promise.all([
+                api.get('courses/'),
+                api.get('lecturers/'),
+                api.get('classrooms/'),
+                api.get('timetable/formatted/')
+            ]);
+
+            setCourses(coursesRes.data);
+            setStats([
+                { title: 'Total Courses', value: coursesRes.data.length.toString(), trend: 'Active', icon: 'book', color: 'blue' },
+                { title: 'Registered Lecturers', value: lecturersRes.data.length.toString(), trend: 'Active', icon: 'users', color: 'purple' },
+                { title: 'Rooms Available', value: roomsRes.data.length.toString(), trend: 'Utilization: --', icon: 'building', color: 'orange' },
+                { title: 'Pending Conflicts', value: '0', trend: 'All clear', icon: 'warning', color: 'green', warning: false },
+            ]);
+
+            setTimetable(timetableRes.data || { days_data: [] });
+
+        } catch (error) {
+            console.error("Failed to fetch dashboard stats", error);
+        }
+    };
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const timeSlots = Array.from({ length: 10 }, (_, i) => `${9 + i}:00`);
 
     const getDayClasses = (day) => {
-        return timetable.filter(slot => slot.day === day);
+        // Find the day object in days_data
+        const dayData = timetable.days_data?.find(d => d.day === day);
+        return dayData?.classes || [];
     };
 
     const getClassPosition = (startTime) => {
@@ -88,7 +101,8 @@ const AdminDashboard = () => {
 
     const formatTime = (time) => {
         if (!time) return '';
-        return time.slice(0, 5);
+        if (time.length > 5) return time.slice(0, 5); // Ensure HH:MM format
+        return time;
     };
 
     const colors = [
@@ -105,21 +119,14 @@ const AdminDashboard = () => {
         return colors[hash % colors.length];
     };
 
-    // Mock Stats Data
-    const stats = [
-        { title: 'Total Courses', value: '142', trend: '+2% from last sem', icon: 'book', color: 'blue' },
-        { title: 'Registered Lecturers', value: '56', trend: '+1% new hires', icon: 'users', color: 'purple' },
-        { title: 'Rooms Available', value: '24', trend: 'Utilization: 85%', icon: 'building', color: 'orange' },
-        { title: 'Pending Conflicts', value: '3', trend: 'Requires attention', icon: 'warning', color: 'red', warning: true },
-    ];
-
     const handleGenerate = async () => {
         setGenerating(true);
         setMessage('');
         setProgress(0);
         setShowPublishButton(false);
+        setConflicts([]);
 
-        // Mock progress animation
+        // Mock progress animation for better UX
         const interval = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 95) return prev;
@@ -133,17 +140,44 @@ const AdminDashboard = () => {
             setProgress(100);
 
             if (response.data.status === 'success') {
-                setMessage('Timetable generated successfully!');
+                setMessage('✅ Timetable generated successfully! No conflicts detected.');
                 setShowPublishButton(true);
+                setConflicts([]);
+                // Refresh the timetable preview
+                fetchStats();
                 setTimeout(() => setGenerating(false), 2000);
-            } else {
-                setMessage(`Generated with conflicts: ${response.data.unscheduled.length} unscheduled items.`);
+            } else if (response.data.status === 'partial_success') {
+                const unscheduled = response.data.unscheduled || [];
+                setConflicts(unscheduled);
+                setMessage(`⚠️ Generated with ${unscheduled.length} conflicts. Check "Attention Needed" section below.`);
+                // Refresh to show what WAS scheduled
+                fetchStats();
                 setGenerating(false);
             }
-        } catch {
+        } catch (error) {
             clearInterval(interval);
-            setMessage('Error generating timetable.');
+            setMessage('❌ Error generating timetable: ' + (error.response?.data?.message || error.message));
             setGenerating(false);
+        }
+    };
+
+    const handleResolveConflicts = async () => {
+        setResolvingConflicts(true);
+        try {
+            // Call backend to auto-resolve conflicts
+            const response = await api.post('timetable/resolve-conflicts/');
+
+            if (response.data.status === 'success') {
+                setMessage('✅ Conflicts resolved successfully!');
+                setConflicts([]);
+                fetchStats();
+            } else {
+                setMessage('⚠️ Some conflicts could not be auto-resolved.');
+            }
+        } catch (error) {
+            setMessage('❌ Error resolving conflicts: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setResolvingConflicts(false);
         }
     };
 
@@ -176,14 +210,12 @@ const AdminDashboard = () => {
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg relative mr-1">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                            </button>
-
-                            <button className="px-4 py-2 border border-blue-200 bg-blue-50 rounded-lg text-sm font-semibold text-blue-900 hover:bg-blue-100 flex items-center gap-2 transition-all">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                Export Schedule
+                            <button
+                                onClick={() => setShowSemesterModal(true)}
+                                className="px-4 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-sm font-bold rounded-lg outline-none hover:bg-blue-100 transition-all flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                Semester {currentSemester} ({academicYear})
                             </button>
 
                             {showPublishButton && (
@@ -259,88 +291,114 @@ const AdminDashboard = () => {
 
                     {/* Bottom Section */}
                     <div className="space-y-8">
-                        {/* Attention Needed */}
+                        {/* Attention Needed - Dynamic Conflicts */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[400px]">
                             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                                 <div className="flex items-center gap-3">
                                     <h3 className="font-bold text-gray-900">Attention Needed</h3>
-                                    <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">3 Issues</span>
+                                    {conflicts.length > 0 ? (
+                                        <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+                                            {conflicts.length} Issue{conflicts.length > 1 ? 's' : ''}
+                                        </span>
+                                    ) : (
+                                        <span className="bg-green-100 text-green-600 text-xs font-bold px-2 py-1 rounded-full">
+                                            All Clear
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex gap-2 text-gray-400">
-                                    <button className="hover:text-gray-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg></button>
-                                    <button className="hover:text-gray-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg></button>
-                                </div>
+                                {conflicts.length > 0 && (
+                                    <button
+                                        onClick={handleResolveConflicts}
+                                        disabled={resolvingConflicts}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold text-sm flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {resolvingConflicts ? (
+                                            <>
+                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Resolving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Auto-Resolve All
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
 
                             <div className="flex-1 overflow-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-blue-50 text-xs text-blue-900 uppercase font-bold border-b border-blue-100">
-                                            <th className="px-6 py-4">Severity</th>
-                                            <th className="px-6 py-4">Conflict Type</th>
-                                            <th className="px-6 py-4">Details</th>
-                                            <th className="px-6 py-4 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Critical
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Double Booking</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Room 304 (Lab)</p>
-                                                <p className="text-xs text-gray-500">CS101 & ENG202 on Mon 9AM</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-blue-600 hover:text-blue-800 text-sm font-bold">Resolve</button>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> Moderate
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Capacity Overflow</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Auditorium A</p>
-                                                <p className="text-xs text-gray-500">Course enrollment (120) {'>'} Room Cap (100)</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-blue-600 hover:text-blue-800 text-sm font-bold">Resolve</button>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50 group transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-600">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Low
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-900">Soft Constraint</td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-bold text-gray-900">Prof. Smith</p>
-                                                <p className="text-xs text-gray-500">Preferred no classes after 4PM</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-gray-400 hover:text-gray-600 text-sm font-bold">Ignore</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-4 border-t border-gray-100 text-center">
-                                <button className="text-sm text-gray-500 font-semibold hover:text-gray-700 transition-colors">View All Conflicts</button>
+                                {conflicts.length > 0 ? (
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-blue-50 text-xs text-blue-900 uppercase font-bold border-b border-blue-100">
+                                                <th className="px-6 py-4">Subject</th>
+                                                <th className="px-6 py-4">Course & Year</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {conflicts.map((conflict, index) => (
+                                                <tr key={index} className="hover:bg-gray-50 group transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <p className="text-sm font-bold text-gray-900">{conflict.subject}</p>
+                                                        <p className="text-xs text-gray-500">{conflict.code}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <p className="text-sm font-semibold text-gray-700">{conflict.course}</p>
+                                                        <p className="text-xs text-gray-500">Year {conflict.year} • Semester {conflict.semester}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">
+                                                                {conflict.scheduled}/{conflict.needed}h
+                                                            </span>
+                                                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-bold">
+                                                                -{conflict.missing}h
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-start gap-2">
+                                                            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                            </svg>
+                                                            <p className="text-xs text-gray-600">{conflict.reason}</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                                        <svg className="w-16 h-16 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <h4 className="text-lg font-bold text-gray-900 mb-2">No Conflicts Detected</h4>
+                                        <p className="text-sm text-gray-500">All subjects have been successfully scheduled!</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {/* University Schedule Preview */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col p-6">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-1">University Schedule Preview</h3>
-                                    <p className="text-sm text-gray-500 font-medium italic">Viewing Master Timetable • Semester 1</p>
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 mb-1">University Schedule Preview</h3>
+                                        <p className="text-sm text-gray-500 font-medium italic">Viewing Master Timetable • Semester {currentSemester} - {academicYear}</p>
+                                    </div>
+                                    <button className="px-4 py-2 border border-blue-200 bg-blue-50 rounded-lg text-sm font-semibold text-blue-900 hover:bg-blue-100 flex items-center gap-2 transition-all">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        Export Schedule
+                                    </button>
                                 </div>
 
                                 <div className="flex items-center gap-3">
@@ -363,16 +421,23 @@ const AdminDashboard = () => {
 
                                     <div className="h-8 w-[1px] bg-gray-200 mx-1 hidden md:block"></div>
 
-                                    <select className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all">
-                                        <option>BSc Computer Science</option>
-                                        <option>BSc Engineering</option>
-                                        <option>BSc Management</option>
+                                    <select
+                                        value={selectedCourse}
+                                        onChange={(e) => setSelectedCourse(e.target.value)}
+                                        className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all"
+                                    >
+                                        <option value="">All Courses</option>
+                                        {courses.map(course => (
+                                            <option key={course.id} value={course.id}>
+                                                {course.name} ({course.code})
+                                            </option>
+                                        ))}
                                     </select>
-                                    <select className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all">
-                                        <option>Year 1</option>
-                                        <option>Year 2</option>
-                                        <option>Year 3</option>
-                                        <option>Year 4</option>
+                                    <select
+                                        onClick={() => setShowSemesterModal(true)}
+
+                                        className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all"
+                                    >
                                     </select>
                                 </div>
                             </div>
@@ -411,26 +476,33 @@ const AdminDashboard = () => {
                                                         ))}
 
                                                         {getDayClasses(day).map(slot => {
-                                                            const top = getClassPosition(slot.start_time) * 80;
-                                                            const height = getClassDuration(slot.start_time, slot.end_time) * 80;
-                                                            const colorClass = getColorForSubject(slot.subject_details.name);
+                                                            const top = getClassPosition(slot.time.start) * 80;
+                                                            const height = getClassDuration(slot.time.start, slot.time.end) * 80;
+                                                            const colorClass = slot.display.color_class;
 
                                                             return (
                                                                 <div
                                                                     key={slot.id}
-                                                                    className={`absolute left-1 right-1 ${colorClass} rounded-xl p-3 border-l-4 shadow-sm hover:shadow-xl transition-all cursor-pointer z-10 hover:-translate-y-0.5 overflow-hidden group/item`}
-                                                                    style={{ top: `${top}px`, height: `${height}px` }}
+                                                                    className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col overflow-hidden group z-10`}
+                                                                    style={{ top: `${top + 2}px`, height: `${height - 4}px` }}
                                                                 >
-                                                                    <div className="text-xs font-bold mb-1 truncate leading-tight">
-                                                                        {slot.subject_details.name}
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-0.5 mt-1">
-                                                                        <div className="flex items-center gap-1 text-[10px] font-bold opacity-80">
-                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                                            Room {slot.classroom_details.room_number}
+                                                                    <div className="flex-1 min-h-0 flex flex-col gap-0.5">
+                                                                        <div className="text-[10px] font-extrabold opacity-70 uppercase tracking-wider">
+                                                                            {slot.subject.code}
                                                                         </div>
-                                                                        <div className="text-[10px] font-bold opacity-60">
-                                                                            {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                                                                        <div className="text-xs font-bold leading-tight line-clamp-3">
+                                                                            {slot.subject.name}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="mt-1 pt-1.5 border-t border-black/5 flex flex-col gap-0.5">
+                                                                        <div className="text-[10px] font-medium flex items-center gap-1 opacity-90">
+                                                                            <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                                            <span className="truncate">{slot.subject.lecturer_name || 'TBA'}</span>
+                                                                        </div>
+                                                                        <div className="text-[10px] font-medium flex items-center gap-1 opacity-90">
+                                                                            <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                                                            <span className="truncate">RM {slot.classroom.room_number}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -445,7 +517,7 @@ const AdminDashboard = () => {
                             ) : (
                                 <div className="space-y-6">
                                     {days.map(day => {
-                                        const classes = getDayClasses(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
+                                        const classes = getDayClasses(day).sort((a, b) => a.time.start.localeCompare(b.time.start));
                                         return (
                                             <div key={day} className="bg-white">
                                                 <div className="flex items-center gap-4 mb-4">
@@ -457,22 +529,22 @@ const AdminDashboard = () => {
                                                         classes.map(slot => (
                                                             <div key={slot.id} className="p-4 bg-gray-50 hover:bg-white rounded-2xl border border-transparent hover:border-blue-100 transition-all group flex items-start gap-4 shadow-sm hover:shadow-md">
                                                                 <div className="w-16 h-16 bg-blue-900 rounded-xl flex flex-col items-center justify-center text-white shrink-0 shadow-lg shadow-blue-900/20">
-                                                                    <span className="text-xs font-bold leading-none">{formatTime(slot.start_time).split(':')[0]}</span>
+                                                                    <span className="text-xs font-bold leading-none">{slot.time.start.split(':')[0]}</span>
                                                                     <span className="text-[8px] font-bold opacity-50 uppercase mt-0.5">Start</span>
                                                                 </div>
                                                                 <div className="flex-1 min-w-0 py-1">
                                                                     <div className="flex justify-between items-start mb-1">
-                                                                        <h5 className="font-bold text-blue-900 truncate pr-2">{slot.subject_details.name}</h5>
-                                                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Lec {slot.classroom_details.room_number}</span>
+                                                                        <h5 className="font-bold text-blue-900 truncate pr-2">{slot.subject.name}</h5>
+                                                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Lec {slot.classroom.room_number}</span>
                                                                     </div>
                                                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 font-medium">
                                                                         <span className="flex items-center gap-1.5">
                                                                             <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                                                            {slot.subject_details.lecturer_name}
+                                                                            {slot.subject.lecturer_name}
                                                                         </span>
                                                                         <span className="flex items-center gap-1.5 text-blue-900 font-bold">
                                                                             <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                                            {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                                                                            {slot.time.start} - {slot.time.end}
                                                                         </span>
                                                                     </div>
                                                                 </div>
@@ -494,8 +566,61 @@ const AdminDashboard = () => {
 
                 </main>
             </div>
+
+            {/* Semester Dropdown Menu */}
+            {showSemesterModal && (
+                <>
+                    {/* Backdrop to close dropdown */}
+                    <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowSemesterModal(false)}
+                    ></div>
+
+                    {/* Dropdown positioned at top-right */}
+                    <div className="fixed top-20 right-8 z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-64 overflow-hidden">
+                        <div className="p-3 bg-blue-50 border-b border-blue-100">
+                            <h4 className="font-bold text-blue-900 text-sm">Change Active Semester</h4>
+                            <p className="text-xs text-gray-600 mt-1">Select semester for the system</p>
+                        </div>
+
+                        <div className="p-2">
+                            <button
+                                onClick={() => handleChangeSemester(1)}
+                                className={`w-full p-3 rounded-lg text-left transition-all mb-2 ${currentSemester === 1
+                                    ? 'bg-blue-500 text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
+                            >
+                                <div className="font-bold text-sm">Semester 1</div>
+                                <div className={`text-xs ${currentSemester === 1 ? 'text-blue-100' : 'text-gray-500'}`}>
+                                    {academicYear}
+                                    {currentSemester === 1 && ' • Active'}
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleChangeSemester(2)}
+                                className={`w-full p-3 rounded-lg text-left transition-all ${currentSemester === 2
+                                    ? 'bg-blue-500 text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
+                            >
+                                <div className="font-bold text-sm">Semester 2</div>
+                                <div className={`text-xs ${currentSemester === 2 ? 'text-blue-100' : 'text-gray-500'}`}>
+                                    {academicYear}
+                                    {currentSemester === 2 && ' • Active'}
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Conflicts Modal Removed - Moved to Attention Needed Section */}
+
         </div>
     );
 };
 
 export default AdminDashboard;
+

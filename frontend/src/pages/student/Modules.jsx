@@ -3,167 +3,173 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * Modules - Pure Display Component
+ * 
+ * NO GROUPING LOGIC - Backend does all grouping by semester
+ */
 const Modules = () => {
     const { user } = useAuth();
-    const [modules, setModules] = useState([]);
+    const [groupedData, setGroupedData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState(null);
     const [selectedSemester, setSelectedSemester] = useState('all');
 
     useEffect(() => {
         const fetchModules = async () => {
+            if (!user) return;
+
             try {
-                // Use profile from auth context if available
-                let studentProfile = user.student_profile;
+                const courseId = user.student_profile?.course;
+                const year = user.student_profile?.year;
 
-                if (!studentProfile) {
-                    const profileRes = await api.get(`students/?user=${user.id}`);
-                    if (profileRes.data.length > 0) {
-                        studentProfile = profileRes.data[0];
-                    }
+                if (!courseId) {
+                    console.error("Student has no course assigned");
+                    setLoading(false);
+                    return;
                 }
 
-                if (studentProfile) {
-                    setProfile(studentProfile);
-                    // Fetch all subjects for the student's course and year
-                    const response = await api.get(`subjects/?course=${studentProfile.course}&year=${studentProfile.year}`);
-                    setModules(response.data);
+                // Fetch GROUPED subjects from backend
+                // Backend filters by course and year (inferred from subject code)
+                let url = `subjects/grouped/?course_id=${courseId}`;
+                if (year) {
+                    url += `&year=${year}`;
                 }
+
+                const response = await api.get(url);
+                setGroupedData(response.data);
             } catch (error) {
                 console.error("Error fetching modules", error);
             } finally {
                 setLoading(false);
             }
         };
-        if (user) fetchModules();
+
+        fetchModules();
     }, [user]);
 
-    const groupedModules = modules.reduce((acc, module) => {
-        const semester = module.semester || 'Unknown';
-        if (!acc[semester]) {
-            acc[semester] = [];
-        }
-        acc[semester].push(module);
-        return acc;
-    }, {});
+    // Derived state
+    const semestersList = groupedData ? groupedData.semesters.map(s => s.semester) : [];
+    const totalModules = groupedData ? groupedData.semesters.reduce((acc, curr) => acc + curr.subjects.length, 0) : 0;
 
-    const filteredSemesters = selectedSemester === 'all'
-        ? Object.keys(groupedModules).sort()
-        : [selectedSemester];
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 text-lg">Loading modules...</p>
-                </div>
-            </div>
-        );
-    }
+    const filteredSemesters = groupedData
+        ? (selectedSemester === 'all'
+            ? groupedData.semesters
+            : groupedData.semesters.filter(s => s.semester === selectedSemester))
+        : [];
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
             <Sidebar />
 
-            {/* Main Content */}
-            <div className="flex-1 ml-72 overflow-auto">
-                <div className="p-8">
-                    {/* Header */}
-                    <div className="mb-6">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Modules</h1>
-                        <p className="text-gray-600">
-                            Year {profile?.year} • All modules for your course
-                        </p>
-                    </div>
-
-                    {/* Semester Filter */}
-                    <div className="mb-6 flex items-center gap-4">
-                        <label className="text-sm font-semibold text-gray-700">Filter by Semester:</label>
-                        <select
-                            value={selectedSemester}
-                            onChange={(e) => setSelectedSemester(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none"
-                        >
-                            <option value="all">All Semesters</option>
-                            {Object.keys(groupedModules).sort().map(sem => (
-                                <option key={sem} value={sem}>Semester {sem}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Modules by Semester */}
-                    {modules.length === 0 ? (
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
-                            <div className="bg-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Modules Found</h3>
-                            <p className="text-gray-500">Modules will appear here once they are assigned to your course.</p>
+            <div className="flex-1 overflow-auto ml-72">
+                {loading ? (
+                    <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900 mx-auto mb-4"></div>
+                            <p className="text-gray-600 font-medium">Loading modules...</p>
                         </div>
-                    ) : (
+                    </div>
+                ) : !groupedData || !groupedData.semesters.length ? (
+                    <div className="h-full flex items-center justify-center">
+                        <p className="text-gray-600">No modules available</p>
+                    </div>
+                ) : (
+                    <div className="p-8">
+                        {/* Header */}
+                        <div className="mb-8">
+                            <h1 className="text-3xl font-bold text-gray-900">My Modules</h1>
+                            <p className="text-gray-500 mt-1">
+                                {totalModules} modules across {semestersList.length} semesters
+                            </p>
+                        </div>
+
+                        {/* Semester Filter */}
+                        <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4">Filter by Semester</h3>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => setSelectedSemester('all')}
+                                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${selectedSemester === 'all'
+                                        ? 'bg-blue-900 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    All Semesters
+                                </button>
+                                {semestersList.map(sem => (
+                                    <button
+                                        key={sem}
+                                        onClick={() => setSelectedSemester(sem)}
+                                        className={`px-4 py-2 rounded-lg font-semibold transition-all ${selectedSemester === sem
+                                            ? 'bg-blue-900 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        Semester {sem}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Modules by Semester */}
                         <div className="space-y-8">
-                            {filteredSemesters.map(semester => (
-                                <div key={semester} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
-                                        <h2 className="text-2xl font-bold text-white">
-                                            Semester {semester}
-                                        </h2>
-                                        <p className="text-blue-100 text-sm mt-1">
-                                            {groupedModules[semester].length} {groupedModules[semester].length === 1 ? 'module' : 'modules'}
+                            {filteredSemesters.map(semesterGroup => (
+                                <div key={semesterGroup.semester} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                    {/* Semester Header */}
+                                    <div className="px-8 py-6 bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+                                        <h2 className="text-2xl font-bold">Semester {semesterGroup.semester}</h2>
+                                        <p className="text-blue-100 mt-1">
+                                            {semesterGroup.subjects.length} modules
                                         </p>
                                     </div>
 
-                                    <div className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {groupedModules[semester].map((module) => (
-                                                <div
-                                                    key={module.id}
-                                                    className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100 hover:shadow-md transition-shadow duration-200"
-                                                >
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="bg-blue-900 text-white rounded-lg px-3 py-1 text-xs font-semibold">
-                                                            {module.code || 'N/A'}
-                                                        </div>
-                                                        <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                                                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                                            </svg>
-                                                        </div>
+                                    {/* Modules Grid */}
+                                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {semesterGroup.subjects.map(module => (
+                                            <div
+                                                key={module.id}
+                                                className="border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
+                                            >
+                                                {/* Module Code Badge */}
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <span className="inline-block px-3 py-1 bg-blue-50 text-blue-900 text-xs font-bold rounded-full">
+                                                        {module.code}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {module.weekly_hours} Hours
+                                                    </span>
+                                                </div>
+
+                                                {/* Module Name */}
+                                                <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                                                    {module.name}
+                                                </h3>
+
+                                                {/* Lecturer Info */}
+                                                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs uppercase">
+                                                        {module.lecturer_name ? module.lecturer_name.charAt(0) : 'T'}
                                                     </div>
-
-                                                    <h3 className="text-lg font-bold text-gray-900 mb-2">
-                                                        {module.name}
-                                                    </h3>
-
-                                                    <div className="space-y-2 text-sm">
-                                                        <div className="flex items-center text-gray-600">
-                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                            </svg>
-                                                            {module.lecturer_name || 'TBA'}
-                                                        </div>
-
-                                                        {module.credits && (
-                                                            <div className="flex items-center text-gray-600">
-                                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                </svg>
-                                                                {module.credits} Credits
-                                                            </div>
-                                                        )}
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-900">{module.lecturer_name || 'TBA'}</p>
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Lecturer</p>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+
+                                                {/* Course Badge */}
+                                                {module.course_name && (
+                                                    <div className="mt-2 text-xs text-gray-400">
+                                                        {module.course_name}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

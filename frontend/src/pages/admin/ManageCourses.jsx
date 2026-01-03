@@ -5,12 +5,13 @@ import AdminSidebar from '../../components/AdminSidebar';
 const ManageCourses = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Form State
     const [formData, setFormData] = useState({
         name: '',
         code: '',
-        description: '' // Extra field for visual balance
+        faculty: ''
     });
 
     useEffect(() => {
@@ -20,14 +21,7 @@ const ManageCourses = () => {
     const fetchCourses = async () => {
         try {
             const response = await api.get('courses/');
-            // Enhance data for UI
-            const enhancedData = response.data.map(course => ({
-                ...course,
-                totalSubjects: Math.floor(Math.random() * 20) + 10, // Mock stat
-                status: 'Active',
-                faculty: 'Science' // Mock
-            }));
-            setCourses(enhancedData);
+            setCourses(response.data);
         } catch {
             console.error("Failed to fetch courses");
         } finally {
@@ -35,20 +29,42 @@ const ManageCourses = () => {
         }
     };
 
+    const filteredCourses = courses.filter(course => {
+        const query = searchQuery.toLowerCase();
+        return (
+            course.name?.toLowerCase().includes(query) ||
+            course.code?.toLowerCase().includes(query) ||
+            course.faculty?.toLowerCase().includes(query) ||
+            (course.is_active ? 'active' : 'inactive').includes(query)
+        );
+    });
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Backend only expects name and code based on previous knowledge
             await api.post('courses/', {
                 name: formData.name,
-                code: formData.code
+                code: formData.code,
+                faculty: formData.faculty || 'General'
             });
 
             // Reset
-            setFormData({ name: '', code: '', description: '' });
+            setFormData({ name: '', code: '', faculty: '' });
             fetchCourses();
         } catch {
             alert('Error creating course');
+        }
+    };
+
+    const handleToggleStatus = async (course) => {
+        try {
+            await api.patch(`courses/${course.id}/`, {
+                is_active: !course.is_active
+            });
+            fetchCourses();
+        } catch (error) {
+            console.error("Failed to update status", error);
+            alert("Failed to update status");
         }
     };
 
@@ -99,19 +115,20 @@ const ManageCourses = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Description (Optional)</label>
-                                    <textarea
-                                        placeholder="Brief description of the degree..."
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Faculty</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Science & Technology"
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
-                                        rows="3"
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    ></textarea>
+                                        value={formData.faculty}
+                                        onChange={e => setFormData({ ...formData, faculty: e.target.value })}
+                                        required
+                                    />
                                 </div>
 
                                 <div className="pt-2 flex gap-3">
                                     <button type="submit" className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-all active:scale-95 shadow-md">Save Program</button>
-                                    <button type="button" onClick={() => setFormData({ name: '', code: '', description: '' })} className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg text-sm transition-colors">Clear</button>
+                                    <button type="button" onClick={() => setFormData({ name: '', code: '', faculty: '' })} className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg text-sm transition-colors">Clear</button>
                                 </div>
                             </form>
                         </div>
@@ -137,7 +154,7 @@ const ManageCourses = () => {
                         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                             <div className="flex items-center gap-2">
                                 <h2 className="font-bold text-gray-900">Existing Programs</h2>
-                                <span className="text-gray-400 text-sm">({courses.length} Total)</span>
+                                <span className="text-gray-400 text-sm">({filteredCourses.length} Total)</span>
                             </div>
                             <div className="flex gap-3">
                                 <div className="relative">
@@ -146,11 +163,11 @@ const ManageCourses = () => {
                                         type="text"
                                         placeholder="Search programs..."
                                         className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-900 outline-none bg-gray-50 focus:bg-white transition-all"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 focus:ring-2 focus:ring-blue-900 transition-all">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-                                </button>
+
                             </div>
                         </div>
 
@@ -165,10 +182,10 @@ const ManageCourses = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {courses.length === 0 && !loading && (
-                                        <tr><td colSpan="4" className="p-8 text-center text-gray-500">No programs found.</td></tr>
+                                    {filteredCourses.length === 0 && !loading && (
+                                        <tr><td colSpan="4" className="p-8 text-center text-gray-500">No programs found matching filters.</td></tr>
                                     )}
-                                    {courses.map((course) => (
+                                    {filteredCourses.map((course) => (
                                         <tr key={course.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <span className="font-mono bg-blue-50 text-blue-700 px-2.5 py-1 rounded text-xs font-bold border border-blue-100">{course.code}</span>
@@ -176,10 +193,16 @@ const ManageCourses = () => {
                                             <td className="px-6 py-4 font-bold text-gray-900 text-sm">{course.name}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600">{course.faculty}</td>
                                             <td className="px-6 py-4 text-right">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                    Active
-                                                </span>
+                                                <button
+                                                    onClick={() => handleToggleStatus(course)}
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${course.is_active
+                                                        ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                                                        : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${course.is_active ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                                    {course.is_active ? 'Active' : 'Inactive'}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

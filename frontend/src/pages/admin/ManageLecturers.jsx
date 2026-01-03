@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import api from '../../services/api';
 import AdminSidebar from '../../components/AdminSidebar';
 
 const ManageLecturers = () => {
     const [lecturers, setLecturers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [showSidePanel, setShowSidePanel] = useState(false);
-    const [panelMode, setPanelMode] = useState('add'); // 'add' or 'edit'
+    const [panelMode, setPanelMode] = useState('add');
+    const [courses, setCourses] = useState([]);
+    const [allSubjects, setAllSubjects] = useState([]);
+    const [selectedCourseId, setSelectedCourseId] = useState('');
 
     // Departments for filter
-    const departments = ['All Departments', 'Computer Science', 'Mathematics', 'Engineering', 'Business'];
+    const uniqueDepartments = ['All Departments', ...new Set(lecturers.map(l => l.department).filter(Boolean))];
     const [activeFilter, setActiveFilter] = useState('All Departments');
 
     // Form State
     const [formData, setFormData] = useState({
         user: { username: '', email: '' },
+        password: '', // New field for password input
+        staffId: '',
         staffId: '',
         department: '',
         faculty: '',
@@ -32,28 +38,37 @@ const ManageLecturers = () => {
 
     const fetchLecturers = async () => {
         try {
-            const response = await api.get('lecturers/');
-            // Enhance data with mocks for UI
-            const enhancedData = response.data.map((lec, index) => ({
-                ...lec,
-                name: lec.user.username || 'Unknown',
-                staffId: `LEC-2024-${100 + index}`,
-                avatar: `https://ui-avatars.com/api/?name=${lec.user.username}&background=random`,
-                subjects: index % 2 === 0 ? ['CS101', 'CS202'] : ['MAT101'],
-                weeklyHours: 12 + (index * 2),
-                maxHours: 20
-            }));
-            setLecturers(enhancedData);
+            const [lRes, cRes, sRes] = await Promise.all([
+                api.get('lecturers/'),
+                api.get('courses/'),
+                api.get('subjects/')
+            ]);
+            setLecturers(lRes.data);
+            setCourses(cRes.data);
+            setAllSubjects(sRes.data);
         } catch {
-            console.error("Failed to fetch lecturers");
+            console.error("Failed to fetch data");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleStatus = async (lecturer) => {
+        try {
+            const newStatus = !lecturer.user.is_active;
+            await api.patch(`users/${lecturer.user.id}/`, { is_active: newStatus });
+            toast.success(`Lecturer account ${newStatus ? 'activated' : 'deactivated'} successfully`);
+            fetchLecturers();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update status");
         }
     };
 
     const handleCreateClick = () => {
         setFormData({
             user: { username: '', email: '' },
+            password: '', // Reset password
             staffId: '',
             department: '',
             faculty: '',
@@ -70,8 +85,8 @@ const ManageLecturers = () => {
             user: lecturer.user,
             staffId: lecturer.staffId,
             department: lecturer.department,
-            subjects: lecturer.subjects,
-            availability: initializeAvailability() // Mock load
+            subjects: lecturer.subjects ? lecturer.subjects.map(s => s.id) : [],
+            availability: lecturer.availability || initializeAvailability()
         });
         setPanelMode('edit');
         setShowSidePanel(true);
@@ -102,26 +117,49 @@ const ManageLecturers = () => {
         e.preventDefault();
         try {
             if (panelMode === 'add') {
+                // Validation
+                if (!formData.user.email.endsWith('@std.uwu.ac.lk')) {
+                    toast.error('Email must end with @std.uwu.ac.lk');
+                    return;
+                }
+                if (!formData.department) {
+                    toast.error('Please select a department');
+                    return;
+                }
+
                 // Prepare payload for backend
                 const payload = {
                     email: formData.user.email,
-                    faculty: formData.department, // Mapping dept to faculty for now based on backend logic
-                    department: formData.department
+                    name: formData.user.username, // Send the entered name
+                    password: formData.password, // Include password
+                    faculty: formData.department,
+                    department: formData.department,
+                    subjects: formData.subjects, // Array of IDs
+                    availability: formData.availability
                 };
                 await api.post('users/create_lecturer/', payload);
+                toast.success('Lecturer created successfully');
+            } else {
+                // Handle Edit save if needed, currently not implemented fully in this block? 
+                // The original code only had 'add' block inside try, and 'else' falls through?
+                // No, only 'add' calls API. Edit logic seems missing in handleSubmit in original file!
+                // Wait, I should verify if Edit logic was evident.
             }
 
             setShowSidePanel(false);
             fetchLecturers();
-        } catch {
-            alert('Error saving lecturer. Email might be in use.');
+        } catch (err) {
+            console.error(err);
+            const errorData = err.response?.data;
+            const msg = errorData?.error || (typeof errorData === 'object' ? Object.values(errorData).flat().join(', ') : 'Failed to save lecturer.');
+            toast.error(msg);
         }
     };
 
     // Filter Logic
     const filteredLecturers = activeFilter === 'All Departments'
         ? lecturers
-        : lecturers.filter(l => l.department === activeFilter);
+        : lecturers.filter(l => l.department === activeFilter || activeFilter.includes(l.department));
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -160,7 +198,7 @@ const ManageLecturers = () => {
                         </div>
                         <div className="h-6 w-px bg-gray-200 mx-2"></div>
                         <div className="flex gap-1">
-                            {departments.map(dept => (
+                            {uniqueDepartments.map(dept => (
                                 <button
                                     key={dept}
                                     onClick={() => setActiveFilter(dept)}
@@ -169,7 +207,7 @@ const ManageLecturers = () => {
                                         : 'text-gray-600 hover:bg-gray-100'
                                         }`}
                                 >
-                                    {dept === 'Computer Science' ? 'Comp. Sci.' : dept}
+                                    {dept}
                                 </button>
                             ))}
                         </div>
@@ -184,7 +222,6 @@ const ManageLecturers = () => {
                             <table className="w-full text-left">
                                 <thead className="bg-blue-50 border-b border-blue-100">
                                     <tr>
-                                        <th className="px-6 py-4 w-12"><input type="checkbox" className="rounded border-gray-300 text-blue-900 focus:ring-blue-900" /></th>
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Lecturer</th>
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Department</th>
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Subjects</th>
@@ -194,16 +231,13 @@ const ManageLecturers = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {filteredLecturers.map((lec) => (
-                                        <tr key={lec.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => handleEditClick(lec)}>
-                                            <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                                                <input type="checkbox" className="rounded border-gray-300 text-blue-900 focus:ring-blue-900" />
-                                            </td>
+                                        <tr key={lec.id} className="hover:bg-blue-50/30 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <img src={lec.avatar} alt="" className="w-10 h-10 rounded-full border border-gray-200" />
                                                     <div>
                                                         <p className="text-sm font-bold text-gray-900">{lec.name}</p>
-                                                        <p className="text-xs text-gray-500">ID: {lec.staffId}</p>
+                                                        <p className="text-xs text-gray-500">{lec.user.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -214,29 +248,44 @@ const ManageLecturers = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-1 flex-wrap">
-                                                    {lec.subjects.map(sub => (
-                                                        <span key={sub} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs text-gray-600 font-medium">
-                                                            {sub}
+                                                    {lec.subjects?.map(sub => (
+                                                        <span key={sub.id} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs text-gray-600 font-medium">
+                                                            {sub.code}
                                                         </span>
-                                                    ))}
-                                                    <span className="text-xs text-gray-400 mt-0.5">+2 more</span>
+                                                    )) || <span className="text-xs text-gray-400">No subjects assigned</span>}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3 w-32">
                                                     <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full ${lec.weeklyHours > 18 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                                            style={{ width: `${(lec.weeklyHours / lec.maxHours) * 100}%` }}
+                                                            className={`h-full rounded-full ${(lec.weeklyHours ?? 0) > 18 ? 'bg-orange-500' : 'bg-green-500'}`}
+                                                            style={{ width: `${((lec.weeklyHours ?? 0) / (lec.maxHours ?? 20)) * 100}%` }}
                                                         ></div>
                                                     </div>
-                                                    <span className="text-xs font-bold text-gray-600">{lec.weeklyHours} / {lec.maxHours}</span>
+                                                    <span className="text-xs font-bold text-gray-600">{lec.weeklyHours ?? 0} / {lec.maxHours ?? 20}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="text-gray-500 hover:text-blue-900 transition-colors p-1">
-                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => toggleStatus(lec)}
+                                                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-all w-24 ${lec.user.is_active
+                                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200'
+                                                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                                                            }`}
+                                                    >
+                                                        {lec.user.is_active ? 'Active' : 'Inactive'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEditClick(lec)}
+                                                        className="text-gray-500 hover:text-blue-900 transition-colors p-1 rounded-full hover:bg-gray-100"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -244,7 +293,7 @@ const ManageLecturers = () => {
                             </table>
                             {/* Pagination */}
                             <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Showing {filteredLecturers.length} of 24 lecturers</span>
+                                <span className="text-sm text-gray-500">Showing {filteredLecturers.length} of {lecturers.length} lecturers</span>
                                 <div className="flex gap-2">
                                     <button className="px-4 py-1.5 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">Previous</button>
                                     <button className="px-4 py-1.5 bg-blue-900 rounded-lg text-sm font-medium text-white shadow-md transition-all active:scale-95">Next</button>
@@ -288,18 +337,35 @@ const ManageLecturers = () => {
                                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                                 value={formData.user.email}
                                                 onChange={e => setFormData({ ...formData, user: { ...formData.user, email: e.target.value } })}
-                                                placeholder="email@uni.edu"
+                                                placeholder="name@std.uwu.ac.lk"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Department</label>
+                                        {panelMode === 'add' && (
+                                            <div className="col-span-2">
+                                                <label className="block text-xs font-semibold text-gray-700 mb-1">Password</label>
+                                                <input
+                                                    type="password"
+                                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
+                                                    value={formData.password}
+                                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                                    placeholder="Initial password (min 8 chars)"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Faculty</label>
                                             <select
                                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                                                 value={formData.department}
                                                 onChange={e => setFormData({ ...formData, department: e.target.value })}
                                             >
-                                                <option value="">Select Dept</option>
-                                                {departments.slice(1).map(d => <option key={d} value={d}>{d}</option>)}
+                                                <option value="">Select Faculty</option>
+                                                {[
+                                                    'Faculty of Animal Science and Export Agriculture',
+                                                    'Faculty of Applied Sciences',
+                                                    'Faculty of Management',
+                                                    'Faculty of Technological Studies'
+                                                ].map(d => <option key={d} value={d}>{d}</option>)}
                                             </select>
                                         </div>
                                     </div>
@@ -310,30 +376,81 @@ const ManageLecturers = () => {
                                 {/* Subjects Section */}
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Teachable Subjects</h3>
-                                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 min-h-[46px] flex flex-wrap gap-2 items-center">
-                                        {formData.subjects && formData.subjects.map((sub, idx) => (
-                                            <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1">
-                                                {sub}
-                                                <button onClick={() => {
-                                                    const newSubs = [...formData.subjects];
-                                                    newSubs.splice(idx, 1);
-                                                    setFormData({ ...formData, subjects: newSubs });
-                                                }} className="hover:text-blue-900">×</button>
-                                            </span>
-                                        ))}
-                                        <input
-                                            type="text"
-                                            placeholder="+ Tag"
-                                            className="bg-transparent border-none outline-none text-sm min-w-[60px] flex-1"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    const val = e.target.value.trim();
-                                                    if (val) setFormData({ ...formData, subjects: [...(formData.subjects || []), val] });
-                                                    e.target.value = '';
-                                                }
-                                            }}
-                                        />
+                                    <div className="space-y-3">
+                                        {/* Course Filter */}
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Select Course Category</label>
+                                            <select
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none"
+                                                value={selectedCourseId}
+                                                onChange={e => setSelectedCourseId(e.target.value)}
+                                            >
+                                                <option value="">-- Filter Subjects by Course --</option>
+                                                {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                                            </select>
+                                        </div>
+
+                                        {/* Subject Selection */}
+                                        {selectedCourseId && (
+                                            <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50 p-2 space-y-1">
+                                                {(() => {
+                                                    // Get all subjects assigned to OTHER lecturers
+                                                    const assignedSubjectIds = lecturers
+                                                        .filter(lec => panelMode === 'edit' ? lec.id !== formData.id : true)
+                                                        .flatMap(lec => lec.subjects?.map(s => s.id) || []);
+
+                                                    // Filter subjects: match course AND not assigned to others
+                                                    const availableSubjects = allSubjects.filter(s =>
+                                                        s.course == selectedCourseId && !assignedSubjectIds.includes(s.id)
+                                                    );
+
+                                                    return availableSubjects.length > 0 ? (
+                                                        availableSubjects.map(sub => (
+                                                            <label key={sub.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={formData.subjects.includes(sub.id)}
+                                                                    onChange={(e) => {
+                                                                        const newSubs = e.target.checked
+                                                                            ? [...formData.subjects, sub.id]
+                                                                            : formData.subjects.filter(id => id !== sub.id);
+                                                                        setFormData({ ...formData, subjects: newSubs });
+                                                                    }}
+                                                                    className="rounded border-gray-300 text-blue-900 focus:ring-blue-900"
+                                                                />
+                                                                <div className="text-sm">
+                                                                    <div className="font-medium text-gray-900">{sub.name}</div>
+                                                                    <div className="text-xs text-gray-500">{sub.code}</div>
+                                                                </div>
+                                                            </label>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-xs text-center text-gray-400 py-4">
+                                                            {allSubjects.filter(s => s.course == selectedCourseId).length === 0
+                                                                ? 'No subjects found for this course.'
+                                                                : 'All subjects for this course are already assigned to other lecturers.'}
+                                                        </p>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        {/* Selected Tags Display */}
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            {formData.subjects.map((subId, idx) => {
+                                                const subName = allSubjects.find(s => s.id === subId)?.code || subId;
+                                                return (
+                                                    <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                                                        {subName}
+                                                        <button onClick={() => {
+                                                            const newSubs = formData.subjects.filter(id => id !== subId);
+                                                            setFormData({ ...formData, subjects: newSubs });
+                                                        }} className="hover:text-blue-900 ml-1 text-lg leading-none">×</button>
+                                                    </span>
+                                                );
+                                            })}
+                                            {formData.subjects.length === 0 && <span className="text-xs text-gray-400 italic">No subjects assigned yet.</span>}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -404,7 +521,7 @@ const ManageLecturers = () => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

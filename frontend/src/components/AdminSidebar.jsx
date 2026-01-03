@@ -1,7 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import uwuLogo from '../assets/uwu.png';
 
 const AdminSidebar = () => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
     const location = useLocation();
     const isActive = (path) => location.pathname === path;
 
@@ -22,6 +25,11 @@ const AdminSidebar = () => {
             )
         },
         {
+            name: 'Students', path: '/admin/students', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" /><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
+            )
+        },
+        {
             name: 'Classrooms', path: '/admin/classrooms', icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-3m-1 0h7m-5 4v-3" /></svg>
             )
@@ -39,8 +47,8 @@ const AdminSidebar = () => {
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        logout();
+        navigate('/login');
     };
 
     return (

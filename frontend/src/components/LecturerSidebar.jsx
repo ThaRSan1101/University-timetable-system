@@ -7,13 +7,6 @@ const LecturerSidebar = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Mock stats
-    const stats = {
-        totalHours: 14,
-        classes: 8,
-        students: 245
-    };
-
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -81,31 +74,7 @@ const LecturerSidebar = () => {
                     </Link>
                 ))}
 
-                <div className="pt-8 px-4">
-                    <h3 className="text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-6 opacity-50">Weekly Overview</h3>
 
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                                <span className="text-blue-300/60">Total Hours</span>
-                                <span className="text-white">{stats.totalHours} hrs</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden p-[1px]">
-                                <div className="h-full bg-blue-500 rounded-full" style={{ width: '75%' }}></div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                                <span className="text-blue-300/60">Classes</span>
-                                <span className="text-white">{stats.classes} sessions</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden p-[1px]">
-                                <div className="h-full bg-yellow-500 rounded-full" style={{ width: '50%' }}></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </nav>
 
             {/* Logout Action */}
