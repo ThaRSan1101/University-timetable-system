@@ -23,10 +23,19 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             attrs['email'] = attrs['email'].strip().lower()
         
         # Validate credentials
+        # Check active status first
+        email = attrs.get(User.USERNAME_FIELD) or attrs.get('email')
+        if email:
+            user = User.objects.filter(email=email).first()
+            if user and not user.is_active:
+                raise serializers.ValidationError(
+                    'Your account is inactive. Please contact the admin branch.'
+                )
+
         try:
             data = super().validate(attrs)
         except Exception as e:
-            # Provide user-friendly error messages
+            # If we already caught inactive, it raised above. If here, it's invalid creds
             raise serializers.ValidationError(
                 'Invalid email or password. Please check your credentials and try again.'
             )
@@ -113,12 +122,30 @@ class UserViewSet(viewsets.ModelViewSet):
         Admin-only endpoint to create lecturer accounts
         SECURITY: Only admins can create lecturers
         """
+        from academics.models import Subject
+
         data = request.data
+        email = data.get('email')
+
+        if User.objects.filter(email=email).exists():
+            return Response({"error": "User with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
         # Create User
+        # Parse Name
+        full_name = data.get('name', '').strip()
+        if ' ' in full_name:
+            first_name, last_name = full_name.rsplit(' ', 1)
+        else:
+            first_name = full_name or "Lecturer"
+            last_name = "User" # Default if no name provided
+
+        username = email.split('@')[0] if email else data.get('username')
         user_data = {
-            'username': data.get('email'),
-            'email': data.get('email'),
-            'password': 'tempPassword123',  # Should be auto-generated
+            'username': username,
+            'email': email,
+            'password': data.get('password', 'Temppassword@123'),
+            'first_name': first_name,
+            'last_name': last_name,
             'role': 'lecturer'
         }
         serializer = UserSerializer(data=user_data)
@@ -128,8 +155,24 @@ class UserViewSet(viewsets.ModelViewSet):
             LecturerProfile.objects.create(
                 user=user,
                 faculty=data.get('faculty'),
-                department=data.get('department')
+                department=data.get('department'),
+                availability=data.get('availability', {})
             )
+            
+            # Assign Subjects
+            subjects = data.get('subjects', []) 
+            if subjects:
+                # Support IDs or Codes or Names
+                # We'll try to match by ID first (safe for new frontend)
+                found_subs = Subject.objects.filter(id__in=subjects)
+                if not found_subs.exists():
+                     # Fallback to names or codes if strings sent
+                     found_subs = Subject.objects.filter(code__in=subjects) | Subject.objects.filter(name__in=subjects)
+                
+                for sub in found_subs:
+                    sub.lecturer = user
+                    sub.save()
+
             # Send Email (Mock)
             print(f"Sending password to {user.email}: tempPassword123")
             return Response(serializer.data, status=status.HTTP_201_CREATED)

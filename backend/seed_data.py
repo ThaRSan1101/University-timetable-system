@@ -41,31 +41,8 @@ def seed():
         print(" -> Created Admin: admin@std.uwu.ac.lk / admin123")
 
     # 2. Lecturers
+    # REMOVED: All lecturers are now created manually via Admin Dashboard.
     lecturers = []
-    
-    # Specific named lecturer as requested
-    if not User.objects.filter(email='sarah@std.uwu.ac.lk').exists():
-        sarah = User.objects.create_user('Sarah', 'sarah@std.uwu.ac.lk', 'lecturer123', role='lecturer')
-        LecturerProfile.objects.create(user=sarah, faculty='Faculty of Applied Sciences', department='Computer Science')
-        lecturers.append(sarah)
-        print(" -> Created Dummy Lecturer: sarah@std.uwu.ac.lk / lecturer123")
-    else:
-        lecturers.append(User.objects.get(email='sarah@std.uwu.ac.lk'))
-
-    # Additional dummy lecturers for algorithm
-    lec_data = [
-        ('Dr. John Doe', 'john@std.uwu.ac.lk', 'Faculty of Applied Sciences', 'Science'),
-        ('Prof. Jane Roe', 'jane@std.uwu.ac.lk', 'Faculty of Applied Sciences', 'Technology')
-    ]
-    
-    for name, email, fac, dept in lec_data:
-        if not User.objects.filter(email=email).exists():
-            l = User.objects.create_user(name, email, 'lecturer123', role='lecturer')
-            LecturerProfile.objects.create(user=l, faculty=fac, department=dept)
-            lecturers.append(l)
-            print(f" -> Created Lecturer: {email} / lecturer123")
-        else:
-            lecturers.append(User.objects.get(email=email))
             
     # 3. Courses & Faculties
     print("Seeding Faculties and Courses...")

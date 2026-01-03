@@ -11,6 +11,7 @@ import ManageLecturers from './pages/admin/ManageLecturers';
 import ManageCourses from './pages/admin/ManageCourses';
 import ManageSubjects from './pages/admin/ManageSubjects';
 import ManageClassrooms from './pages/admin/ManageClassrooms';
+import ManageStudents from './pages/admin/ManageStudents';
 import Profile from './pages/Profile';
 import Modules from './pages/student/Modules';
 import Grades from './pages/student/Grades';
@@ -63,6 +64,7 @@ function App() {
             <Route path="/admin/lecturers" element={<ManageLecturers />} />
             <Route path="/admin/courses" element={<ManageCourses />} />
             <Route path="/admin/subjects" element={<ManageSubjects />} />
+            <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/classrooms" element={<ManageClassrooms />} />
           </Route>
 

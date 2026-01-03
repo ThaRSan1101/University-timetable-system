@@ -78,11 +78,12 @@ const StudentDashboard = () => {
         );
     }
 
-    if (!timetableData) {
+    if (!timetableData || !timetableData.time_range || !timetableData.time_range.slots || !timetableData.days) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <p className="text-gray-600">No timetable data available</p>
+                    <p className="text-gray-600 font-medium mb-2">No timetable data available</p>
+                    <p className="text-gray-400 text-sm">Please contact your administrator to generate a timetable.</p>
                 </div>
             </div>
         );
@@ -123,8 +124,8 @@ const StudentDashboard = () => {
                                     <button
                                         onClick={() => setViewMode('calendar')}
                                         className={`flex-1 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'calendar'
-                                                ? 'bg-blue-900 text-white'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            ? 'bg-blue-900 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                     >
                                         Calendar
@@ -132,8 +133,8 @@ const StudentDashboard = () => {
                                     <button
                                         onClick={() => setViewMode('list')}
                                         className={`flex-1 px-3 py-2 rounded-lg font-bold transition-all ${viewMode === 'list'
-                                                ? 'bg-blue-900 text-white'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            ? 'bg-blue-900 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                     >
                                         List

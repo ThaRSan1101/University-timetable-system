@@ -1,10 +1,10 @@
 from django.db import models
-from django.conf import settings
+from users.models import User
 
 class Course(models.Model):
-    name = models.CharField(max_length=100) # e.g. Computer Science
+    name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
-    faculty = models.CharField(max_length=100, default='General') # Grouping by Faculty
+    faculty = models.CharField(max_length=100, default='General')
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -12,60 +12,53 @@ class Course(models.Model):
 
 class Classroom(models.Model):
     ROOM_TYPES = (
-        ('lecture', 'Lecture Hall'),
-        ('lab', 'Laboratory'),
+        ('Lecture Hall', 'Lecture Hall'),
+        ('Computer Lab', 'Computer Lab'),
     )
     room_number = models.CharField(max_length=20, unique=True)
-    room_type = models.CharField(max_length=10, choices=ROOM_TYPES)
-    capacity = models.IntegerField()
+    room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
+    capacity = models.IntegerField(default=30)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.room_number} ({self.get_room_type_display()})"
+        return f"{self.room_number} ({self.room_type})"
 
 class Subject(models.Model):
+    ROOM_PREF = (
+        ('Lecture Hall', 'Lecture Hall'),
+        ('Computer Lab', 'Computer Lab'),
+    )
+    
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='subjects')
-    year = models.IntegerField()
-    semester = models.IntegerField()
-    weekly_hours = models.IntegerField()
-    priority = models.IntegerField(default=1) # Higher number = higher priority? Or 1 is high? Let's assume 1 is high.
-    lecturer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, limit_choices_to={'role': 'lecturer'})
+    # Lecturer is now optional
+    lecturer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='subjects')
+    
+    # Year field removed as requested
+    
+    semester = models.IntegerField(choices=((1, '1'), (2, '2')))
+    weekly_hours = models.IntegerField(default=3)
+    
+    # Replaces priority field
+    room_type = models.CharField(max_length=20, choices=ROOM_PREF, default='Lecture Hall') 
 
     def __str__(self):
-        return f"{self.name} ({self.course.code} Y{self.year}S{self.semester})"
+        return f"{self.code} - {self.name}"
 
 class SystemSettings(models.Model):
-    """
-    Singleton model to store system-wide settings like current semester
-    """
-    current_semester = models.IntegerField(
-        choices=[(1, 'Semester 1'), (2, 'Semester 2')], 
-        default=1,
-        help_text="Currently active semester"
-    )
-    academic_year = models.CharField(
-        max_length=20, 
-        default='2024/2025',
-        help_text="Current academic year (e.g., 2024/2025)"
-    )
+    current_semester = models.IntegerField(choices=((1, 'Semester 1'), (2, 'Semester 2')), default=1, help_text="Currently active semester")
+    academic_year = models.CharField(max_length=20, default='2024/2025', help_text="Current academic year (e.g., 2024/2025)")
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "System Settings"
         verbose_name_plural = "System Settings"
-    
+
     def __str__(self):
-        return f"Semester {self.current_semester} - {self.academic_year}"
-    
-    def save(self, *args, **kwargs):
-        # Ensure only one instance exists (singleton pattern)
-        self.pk = 1
-        super().save(*args, **kwargs)
-    
+        return f"Settings ({self.academic_year} - Sem {self.current_semester})"
+
     @classmethod
     def get_settings(cls):
-        """Get or create the singleton settings instance"""
-        settings, created = cls.objects.get_or_create(pk=1)
-        return settings
-
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj

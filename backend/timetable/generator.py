@@ -18,8 +18,8 @@ def generate_timetable_algo():
     # Clear existing timetable for regeneration
     TimetableSlot.objects.all().delete()
     
-    # Get all subjects sorted by priority (high priority first)
-    subjects = Subject.objects.all().order_by('priority', '-weekly_hours')
+    # Get all subjects sorted by weekly_hours (descending)
+    subjects = Subject.objects.all().order_by('-weekly_hours')
     classrooms = list(Classroom.objects.all())
     
     # Track scheduling results
@@ -31,13 +31,8 @@ def generate_timetable_algo():
     END_HOUR = 17   # 5 PM
     DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     
-    # Lunch break times by year
-    LUNCH_BREAKS = {
-        1: 12,  # Year 1: 12-1 PM
-        2: 13,  # Year 2+: 1-2 PM
-        3: 13,
-        4: 13
-    }
+    # Global lunch break
+    LUNCH_HOUR = 12
     
     for subject in subjects:
         hours_needed = subject.weekly_hours
@@ -61,9 +56,8 @@ def generate_timetable_algo():
                     end_time = datetime.time(hour + 1, 0)
                     
                     # ===== CONFLICT CHECK 1: Time Violations =====
-                    # Check lunch break for this year
-                    lunch_hour = LUNCH_BREAKS.get(subject.year, 13)
-                    if hour == lunch_hour:
+                    # Check lunch break
+                    if hour == LUNCH_HOUR:
                         continue  # Skip lunch hour
                     
                     # ===== CONFLICT CHECK 2: Lecturer Availability =====
@@ -78,10 +72,9 @@ def generate_timetable_algo():
                             continue  # Lecturer has another class at this time
                     
                     # ===== CONFLICT CHECK 3: Student Group Availability =====
-                    # Students in same course, year, and semester can't have multiple classes
+                    # Students in same course and semester can't have multiple classes
                     student_group_busy = TimetableSlot.objects.filter(
                         subject__course=subject.course,
-                        subject__year=subject.year,
                         subject__semester=subject.semester,
                         day=day,
                         start_time=start_time
@@ -91,16 +84,23 @@ def generate_timetable_algo():
                         continue  # Students already have a class at this time
                     
                     # ===== CONFLICT CHECK 4: Room Type Matching =====
-                    # Determine required room type based on subject name
-                    required_room_type = 'lab' if 'lab' in subject.name.lower() else 'lecture'
+                    # checking type based on model field
+                    required_room_type = subject.room_type
                     
                     # ===== CONFLICT CHECK 5: Find Available Room =====
                     available_room = None
                     
                     for room in classrooms:
-                        # Check room type matches subject requirement
-                        if room.room_type != required_room_type:
-                            continue  # Wrong room type (lab subject needs lab, not lecture hall)
+                        # Check room type matches subject requirement (flexible matching)
+                        # Normalize to lower case for comparison if data is inconsistent
+                        r_type_db = room.room_type.lower()
+                        r_type_req = required_room_type.lower()
+                        
+                        # Handle mapping if 'Lecture Hall' vs 'lecture'
+                        if 'lecture' in r_type_req and 'lecture' not in r_type_db:
+                           continue
+                        if 'lab' in r_type_req and 'lab' not in r_type_db:
+                           continue
                         
                         # Check if room is already booked at this time
                         room_busy = TimetableSlot.objects.filter(
@@ -113,7 +113,7 @@ def generate_timetable_algo():
                             continue  # Room already booked
                         
                         # ===== OPTIONAL: Check Room Capacity =====
-                        # Assuming ~30 students per year (can be made configurable)
+                        # Assuming ~30 students (can be made configurable)
                         estimated_students = 30
                         if room.capacity < estimated_students:
                             continue  # Room too small
@@ -141,7 +141,6 @@ def generate_timetable_algo():
                 'subject': subject.name,
                 'code': subject.code,
                 'course': subject.course.name,
-                'year': subject.year,
                 'semester': subject.semester,
                 'needed': hours_needed,
                 'scheduled': hours_scheduled,
@@ -171,7 +170,7 @@ def _diagnose_scheduling_failure(subject, classrooms):
         return "No lecturer assigned"
     
     # Check if lecturer is overloaded
-    lecturer_hours = sum(s.weekly_hours for s in subject.lecturer.subject_set.all())
+    lecturer_hours = sum(s.weekly_hours for s in subject.lecturer.subjects.all())
     if lecturer_hours > 20:
         return f"Lecturer overloaded ({lecturer_hours}h/week)"
     

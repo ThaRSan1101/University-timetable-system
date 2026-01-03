@@ -72,13 +72,11 @@ class SubjectViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset()
         
         # Apply filters
+        # Apply filters
         course_id = request.query_params.get('course_id')
-        year = request.query_params.get('year')
         
         if course_id:
             queryset = queryset.filter(course_id=course_id)
-        if year:
-            queryset = queryset.filter(year=year)
         
         # Group by semester
         grouped = defaultdict(list)
@@ -97,10 +95,8 @@ class SubjectViewSet(viewsets.ModelViewSet):
                     'id': subject.lecturer.id if subject.lecturer else None,
                     'name': subject.lecturer.username if subject.lecturer else 'TBA',
                 },
-                'year': subject.year,
                 'semester': subject.semester,
                 'weekly_hours': subject.weekly_hours,
-                'priority': subject.priority,
                 'display': {
                     'semester_label': semester_key,
                     'credits': subject.weekly_hours,  # Assuming weekly_hours = credits
