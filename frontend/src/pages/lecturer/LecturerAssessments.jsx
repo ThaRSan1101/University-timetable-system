@@ -1,25 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LecturerSidebar from '../../components/LecturerSidebar';
+import api from '../../services/api';
+import { toast } from 'sonner';
 
 const LecturerAssessments = () => {
-    const [assessments, setAssessments] = useState([
-        { id: 1, title: 'Data Structures Project', type: 'Assignment', module: 'CS201', dueDate: '2024-12-28', status: 'Active', description: 'Complete all data structure implementations.' },
-        { id: 2, title: 'Database Quiz 1', type: 'Quiz', module: 'CS202', dueDate: '2024-12-30', status: 'Scheduled', description: 'Covers normalization and SQL basics.' },
-    ]);
+    const [assessments, setAssessments] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const [showPanel, setShowPanel] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
-        type: 'Assignment',
-        module: '',
-        dueDate: '',
+        assessment_type: 'Assignment',
+        subject: '',
+        due_date: '',
         description: ''
     });
 
+    // Fetch initial data
+    useEffect(() => {
+        fetchAssessments();
+        fetchSubjects();
+    }, []);
+
+    const fetchAssessments = async () => {
+        try {
+            const response = await api.get('assessments/');
+            setAssessments(response.data);
+        } catch (error) {
+            console.error('Error fetching assessments:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchSubjects = async () => {
+        try {
+            const response = await api.get('assessments/my_subjects/');
+            setSubjects(response.data);
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+        }
+    };
+
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ title: '', type: 'Assignment', module: '', dueDate: '', description: '' });
+        setFormData({
+            title: '',
+            assessment_type: 'Assignment',
+            subject: '',
+            due_date: '',
+            description: ''
+        });
         setShowPanel(true);
     };
 
@@ -27,41 +60,64 @@ const LecturerAssessments = () => {
         setEditingId(assessment.id);
         setFormData({
             title: assessment.title,
-            type: assessment.type,
-            module: assessment.module,
-            dueDate: assessment.dueDate,
+            assessment_type: assessment.assessment_type,
+            subject: assessment.subject,
+            due_date: assessment.due_date,
             description: assessment.description || ''
         });
         setShowPanel(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingId) {
-            // Update existing
-            setAssessments(assessments.map(a =>
-                a.id === editingId ? { ...a, ...formData } : a
-            ));
-        } else {
-            // Create new
-            const assessment = {
-                id: assessments.length + 1,
-                ...formData,
-                status: 'Active'
-            };
-            setAssessments([...assessments, assessment]);
+        try {
+            if (editingId) {
+                // Update existing
+                await api.put(`assessments/${editingId}/`, formData);
+                toast.success('Assessment updated successfully');
+            } else {
+                // Create new
+                await api.post('assessments/', formData);
+                toast.success('Assessment created successfully');
+            }
+            fetchAssessments();
+            setShowPanel(false);
+            setFormData({ title: '', assessment_type: 'Assignment', subject: '', due_date: '', description: '' });
+        } catch (error) {
+            console.error('Error saving assessment:', error);
+            toast.error('Failed to save assessment. Please try again.');
         }
-        setShowPanel(false);
-        setFormData({ title: '', type: 'Assignment', module: '', dueDate: '', description: '' });
     };
 
     const handleCancel = (id) => {
-        if (window.confirm('Are you sure you want to cancel this assessment?')) {
-            setAssessments(assessments.map(a =>
-                a.id === id ? { ...a, status: 'Canceled' } : a
-            ));
+        toast('Cancel Assessment?', {
+            description: 'Are you sure you want to cancel this assessment? This action cannot be undone.',
+            action: {
+                label: 'Yes, cancel it',
+                onClick: () => confirmCancel(id),
+            },
+            cancel: {
+                label: 'No, keep it',
+                onClick: () => { },
+            },
+            duration: Infinity,
+            className: 'bg-white', // Ensure visibility if theme is dark/light mixed
+        });
+    };
+
+    const confirmCancel = async (id) => {
+        try {
+            await api.patch(`assessments/${id}/`, { status: 'Cancelled' });
+            toast.success('Assessment cancelled successfully');
+            fetchAssessments();
+        } catch (error) {
+            console.error('Error cancelling assessment:', error);
+            toast.error('Failed to cancel assessment');
         }
     };
+
+    // Find selected subject details for display
+    const selectedSubject = subjects.find(s => s.id === parseInt(formData.subject));
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans overflow-hidden">
@@ -95,8 +151,9 @@ const LecturerAssessments = () => {
                             <div className="flex gap-2">
                                 <select className="text-sm border-gray-200 rounded-lg focus:ring-blue-900 focus:border-transparent p-2 outline-none border">
                                     <option>All Modules</option>
-                                    <option>CS201</option>
-                                    <option>CS202</option>
+                                    {subjects.map(subject => (
+                                        <option key={subject.id} value={subject.id}>{subject.code} - {subject.name}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -108,50 +165,59 @@ const LecturerAssessments = () => {
                                         <th className="px-6 py-4">Module</th>
                                         <th className="px-6 py-4">Type</th>
                                         <th className="px-6 py-4">Due Date</th>
-                                        <th className="px-6 py-4">Status</th>
                                         <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {assessments.map((assessment) => (
-                                        <tr key={assessment.id} className="hover:bg-blue-50/30 transition-colors group">
-                                            <td className="px-6 py-4 text-gray-900 font-medium">{assessment.title}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-medium uppercase">
-                                                    {assessment.module}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                                    }`}>
-                                                    {assessment.type}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-500 text-sm">{assessment.dueDate}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.status === 'Active' ? 'bg-green-100 text-green-700' :
-                                                    assessment.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                                                        'bg-yellow-100 text-yellow-700'
-                                                    }`}>
-                                                    {assessment.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => handleOpenEdit(assessment)}
-                                                    className="text-blue-900 hover:text-blue-700 mr-4 text-sm font-medium"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleCancel(assessment.id)}
-                                                    className="text-red-500 hover:text-red-700 text-sm font-medium"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </td>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-8 text-center text-gray-500">Loading assessments...</td>
                                         </tr>
-                                    ))}
+                                    ) : assessments.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-8 text-center text-gray-500">No assessments found. Create one to get started.</td>
+                                        </tr>
+                                    ) : (
+                                        assessments.map((assessment) => (
+                                            <tr
+                                                key={assessment.id}
+                                                className={`hover:bg-blue-50/30 transition-colors group ${assessment.status === 'Cancelled' ? 'opacity-50 bg-gray-50' : ''}`}
+                                            >
+                                                <td className="px-6 py-4 text-gray-900 font-medium">
+                                                    {assessment.title}
+                                                    {assessment.status === 'Cancelled' && <span className="ml-2 text-xs text-red-500 font-bold">(Cancelled)</span>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-medium uppercase">
+                                                        {assessment.subject_details?.code || 'N/A'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${assessment.assessment_type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                        {assessment.assessment_type}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-500 text-sm">{assessment.due_date}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleOpenEdit(assessment)}
+                                                        className="text-blue-900 hover:text-blue-700 mr-4 text-sm font-medium"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    {assessment.status !== 'Cancelled' && (
+                                                        <button
+                                                            onClick={() => handleCancel(assessment.id)}
+                                                            className="text-red-500 hover:text-red-700 text-sm font-medium"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -160,7 +226,7 @@ const LecturerAssessments = () => {
 
                 {/* Side Create/Edit Panel */}
                 <div
-                    className={`bg-white border-l border-gray-200 shadow-2xl h-screen flex flex-col ${showPanel ? 'w-[400px] opacity-100' : 'w-0 opacity-0 overflow-hidden'
+                    className={`bg-white border-l border-gray-200 shadow-2xl h-screen flex flex-col transition-all duration-300 ${showPanel ? 'w-[400px] opacity-100' : 'w-0 opacity-0 overflow-hidden'
                         }`}
                 >
                     <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
@@ -188,28 +254,53 @@ const LecturerAssessments = () => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Module</label>
-                                <input
-                                    type="text"
+                                <select
                                     required
                                     className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
-                                    placeholder="e.g., CS201"
-                                    value={formData.module}
-                                    onChange={e => setFormData({ ...formData, module: e.target.value })}
-                                />
+                                    value={formData.subject}
+                                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                                >
+                                    <option value="">Select Module</option>
+                                    {subjects.map(subject => (
+                                        <option key={subject.id} value={subject.id}>
+                                            {subject.code} - {subject.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {selectedSubject && (
+                                    <div className="mt-2 p-3 bg-blue-50 rounded-lg text-xs space-y-1 text-blue-800">
+                                        <div className="flex justify-between">
+                                            <span className="font-semibold">Course:</span>
+                                            <span>{selectedSubject.course_name}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="font-semibold">Year:</span>
+                                            <span>Year {selectedSubject.year}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="font-semibold">Semester:</span>
+                                            <span>Semester {selectedSubject.semester}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
                             <div>
                                 <label className="block text-xs font-medium text-gray-400 uppercase mb-2">Type</label>
                                 <select
                                     className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
-                                    value={formData.type}
-                                    onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                    value={formData.assessment_type}
+                                    onChange={e => setFormData({ ...formData, assessment_type: e.target.value })}
                                 >
                                     <option value="Assignment">Assignment</option>
                                     <option value="Quiz">Quiz</option>
                                     <option value="Exam">Exam</option>
+                                    <option value="Project">Project</option>
+                                    <option value="Presentation">Presentation</option>
+                                    <option value="Lab Report">Lab Report</option>
                                 </select>
                             </div>
                         </div>
@@ -219,9 +310,10 @@ const LecturerAssessments = () => {
                             <input
                                 type="date"
                                 required
+                                min={new Date().toISOString().split('T')[0]}
                                 className="w-full border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent p-3 border outline-none text-gray-800 transition-all font-sans"
-                                value={formData.dueDate}
-                                onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                                value={formData.due_date}
+                                onChange={e => setFormData({ ...formData, due_date: e.target.value })}
                             />
                         </div>
 

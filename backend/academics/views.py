@@ -1,8 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Course, Subject, Classroom, SystemSettings
-from .serializers import CourseSerializer, SubjectSerializer, ClassroomSerializer
+from .models import Course, Subject, Classroom, SystemSettings, Assessment
+from .serializers import CourseSerializer, SubjectSerializer, ClassroomSerializer, AssessmentSerializer
 from collections import defaultdict
 
 
@@ -51,105 +51,73 @@ class SubjectViewSet(viewsets.ModelViewSet):
             if user.student_profile.course:
                 queryset = queryset.filter(course=user.student_profile.course)
         
-        # Lecturers see only their subjects
+        # Lecturers see only their assigned subjects
         elif user.role == 'lecturer':
             queryset = queryset.filter(lecturer=user)
         
         return queryset
     
-    @action(detail=False, methods=['get'], url_path='grouped')
-    def get_grouped_subjects(self, request):
+    @action(detail=False, methods=['get'])
+    def grouped(self, request):
         """
-        BACKEND LOGIC: Group subjects by semester
-        
-        Returns subjects organized by semester with all necessary metadata
-        Eliminates frontend grouping/sorting logic
-        
-        Query params:
-        - course_id: Filter by course (optional)
-        - year: Filter by year (optional)
+        Get subjects grouped by semester for the current user
+        Supports optional year filtering via query param
         """
-        queryset = self.get_queryset()
+        user = request.user
+        year_param = request.query_params.get('year')
         
-        # Apply filters
-        # Apply filters
-        course_id = request.query_params.get('course_id')
+        # Get subjects based on user role
+        if user.role == 'student' and hasattr(user, 'student_profile'):
+            if not user.student_profile.course:
+                return Response({'semesters': []})
+            subjects = Subject.objects.filter(course=user.student_profile.course)
+        elif user.role == 'lecturer':
+            subjects = Subject.objects.filter(lecturer=user)
+        else:
+            subjects = Subject.objects.all()
         
-        if course_id:
-            queryset = queryset.filter(course_id=course_id)
+        # Apply year filtering if provided
+        if year_param:
+            try:
+                year = int(year_param)
+                # Filter by first digit of subject code (e.g., CST101 -> year 1)
+                subjects = [s for s in subjects if s.code and len(s.code) > 3 and s.code[3].isdigit() and int(s.code[3]) == year]
+            except (ValueError, IndexError):
+                pass
         
         # Group by semester
         grouped = defaultdict(list)
-        
-        for subject in queryset:
-            semester_key = f"Semester {subject.semester}"
-            grouped[semester_key].append({
+        for subject in subjects:
+            grouped[subject.semester].append({
                 'id': subject.id,
                 'name': subject.name,
                 'code': subject.code,
-                'course': {
-                    'id': subject.course.id if subject.course else None,
-                    'name': subject.course.name if subject.course else None,
-                },
-                'lecturer': {
-                    'id': subject.lecturer.id if subject.lecturer else None,
-                    'name': subject.lecturer.username if subject.lecturer else 'TBA',
-                },
                 'semester': subject.semester,
                 'weekly_hours': subject.weekly_hours,
-                'display': {
-                    'semester_label': semester_key,
-                    'credits': subject.weekly_hours,  # Assuming weekly_hours = credits
-                }
+                'course_name': subject.course.name if subject.course else None,
+                'lecturer_name': subject.lecturer.username if subject.lecturer else 'TBA'
             })
         
-        # Sort semesters and subjects within each semester
-        sorted_semesters = sorted(grouped.keys())
-        result = {}
+        result = [
+            {'semester': sem, 'subjects': subjs}
+            for sem, subjs in sorted(grouped.items())
+        ]
         
-        for semester in sorted_semesters:
-            # Sort subjects by code within semester
-            result[semester] = sorted(grouped[semester], key=lambda x: x['code'])
-        
-        return Response({
-            'grouped_modules': result,
-            'semesters': sorted_semesters,
-            'total_subjects': sum(len(subjects) for subjects in result.values())
-        })
+        return Response({'semesters': result})
 
 
 class ClassroomViewSet(viewsets.ModelViewSet):
     queryset = Classroom.objects.all()
     serializer_class = ClassroomSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        """
-        SECURITY: All authenticated users can view classrooms
-        Only admins can modify
-        """
-        return Classroom.objects.all()
-    
-    def get_permissions(self):
-        """
-        Only admins can create/update/delete classrooms
-        """
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
-        return [permissions.IsAuthenticated()]
 
 
 class SystemSettingsViewSet(viewsets.ViewSet):
-    """
-    ViewSet for managing system-wide settings like current semester
-    """
     permission_classes = [permissions.IsAuthenticated]
     
-    @action(detail=False, methods=['get'], url_path='current-semester')
-    def get_current_semester(self, request):
+    def list(self, request):
         """
-        Get the current active semester
-        Available to all authenticated users
+        Get current system settings
         """
         settings = SystemSettings.get_settings()
         return Response({
@@ -158,12 +126,18 @@ class SystemSettingsViewSet(viewsets.ViewSet):
             'updated_at': settings.updated_at
         })
     
-    @action(detail=False, methods=['post'], url_path='update-semester', permission_classes=[permissions.IsAdminUser])
+    @action(detail=False, methods=['post'])
     def update_semester(self, request):
         """
-        Update the current active semester
-        Admin only
+        Update current semester and academic year
+        Only admins can do this
         """
+        if request.user.role != 'admin':
+            return Response(
+                {'error': 'Only admins can update semester settings'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         semester = request.data.get('semester')
         academic_year = request.data.get('academic_year')
         
@@ -185,3 +159,67 @@ class SystemSettingsViewSet(viewsets.ViewSet):
             'academic_year': settings.academic_year
         })
 
+
+class AssessmentViewSet(viewsets.ModelViewSet):
+    serializer_class = AssessmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Filter assessments based on user role
+        - Lecturers see only their own assessments
+        - Students see assessments for their subjects
+        - Admins see all assessments
+        """
+        user = self.request.user
+        
+        if user.role == 'lecturer':
+            return Assessment.objects.filter(lecturer=user).select_related('subject', 'subject__course', 'lecturer')
+        elif user.role == 'student' and hasattr(user, 'student_profile'):
+            if user.student_profile.course:
+                year = user.student_profile.year
+                # Filter by subject code year digit (4th character)
+                # Regex matches any 3 prefix chars followed by the year digit
+                # This is more robust than semester field which might be misconfigured
+                year_regex = r'^.{3}%d' % year
+                
+                return Assessment.objects.filter(
+                    subject__course=user.student_profile.course,
+                    subject__code__regex=year_regex
+                ).select_related('subject', 'subject__course', 'lecturer').order_by('due_date')
+        elif user.role == 'admin':
+            return Assessment.objects.all().select_related('subject', 'subject__course', 'lecturer')
+        
+        return Assessment.objects.none()
+    
+    def perform_create(self, serializer):
+        """
+        Automatically set the lecturer to the current user
+        """
+        serializer.save(lecturer=self.request.user)
+    
+    @action(detail=False, methods=['get'])
+    def my_subjects(self, request):
+        """
+        Get subjects assigned to the current lecturer for assessment creation
+        """
+        if request.user.role != 'lecturer':
+            return Response(
+                {'error': 'Only lecturers can access this endpoint'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        subjects = Subject.objects.filter(lecturer=request.user).select_related('course')
+        
+        subject_data = [{
+            'id': subject.id,
+            'code': subject.code,
+            'name': subject.name,
+            'course_name': subject.course.name,
+            'course_code': subject.course.code,
+            'semester': subject.semester,
+            # Extract year from subject code (e.g., CST101 -> 1, CST201 -> 2)
+            'year': int(subject.code[3]) if len(subject.code) > 3 and subject.code[3].isdigit() else None
+        } for subject in subjects]
+        
+        return Response(subject_data)

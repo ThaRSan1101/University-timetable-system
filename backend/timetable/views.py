@@ -121,6 +121,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                         'code': slot.subject.code,
                         'course_name': slot.subject.course.name if slot.subject.course else None,
                         'lecturer_name': slot.subject.lecturer.username if slot.subject.lecturer else None,
+                        'semester': slot.subject.semester,
                     },
                     'classroom': {
                         'id': slot.classroom.id if slot.classroom else None,
@@ -163,9 +164,20 @@ class TimetableViewSet(viewsets.ModelViewSet):
         for i in range(1, len(slots)):
             next_slot = slots[i]
             
-            # Check if same subject and consecutive times
-            if (current.subject.id == next_slot.subject.id and 
-                current.end_time == next_slot.start_time):
+            # Robust time comparison
+            curr_end_hour = current.end_time.hour
+            curr_end_min = current.end_time.minute
+            next_start_hour = next_slot.start_time.hour
+            next_start_min = next_slot.start_time.minute
+            
+            times_consecutive = (curr_end_hour == next_start_hour and 
+                               curr_end_min == next_start_min)
+            
+            # Check if same subject, SAME CLASSROOM, and consecutive times
+            same_subject = current.subject.id == next_slot.subject.id
+            same_classroom = current.classroom.id == next_slot.classroom.id
+            
+            if (same_subject and same_classroom and times_consecutive):
                 # Extend current slot
                 current.end_time = next_slot.end_time
             else:

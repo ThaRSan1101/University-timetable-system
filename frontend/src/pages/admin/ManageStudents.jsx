@@ -8,6 +8,7 @@ const ManageStudents = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('All Departments');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchStudents();
@@ -39,9 +40,20 @@ const ManageStudents = () => {
 
     // Filter Logic
     const uniqueDepartments = ['All Departments', ...new Set(students.map(s => s.department).filter(Boolean))];
-    const filteredStudents = activeFilter === 'All Departments'
-        ? students
-        : students.filter(s => s.department === activeFilter);
+
+    const filteredStudents = students.filter(student => {
+        // Department filter
+        const matchesDepartment = activeFilter === 'All Departments' || student.department === activeFilter;
+
+        // Search filter
+        const matchesSearch = !searchTerm ||
+            student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.user?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.course_code?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        return matchesDepartment && matchesSearch;
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -60,9 +72,19 @@ const ManageStudents = () => {
                             <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             <input
                                 type="text"
-                                placeholder="Search by name, ID..."
+                                placeholder="Search by name, email, course..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-900 outline-none transition-all"
                             />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            )}
                         </div>
                         <div className="h-6 w-px bg-gray-200 mx-2"></div>
                         <div className="flex gap-1 overflow-x-auto">
@@ -104,8 +126,8 @@ const ManageStudents = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-xs font-bold">
-                                            {stu.department || 'N/A'}
+                                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${stu.department ? 'bg-blue-50 text-blue-700' : 'bg-blue-100 text-blue-600'}`}>
+                                            {stu.department || 'Not Assigned'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -115,8 +137,8 @@ const ManageStudents = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex gap-1 flex-wrap w-48">
                                             {stu.subjects && stu.subjects.length > 0 ? stu.subjects.map(sub => (
-                                                <span key={sub} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs text-gray-600 font-medium">
-                                                    {sub}
+                                                <span key={sub.id || sub.code || sub} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs text-gray-600 font-medium">
+                                                    {sub.code || sub}
                                                 </span>
                                             )) : <span className="text-xs text-gray-400">No subjects</span>}
                                         </div>

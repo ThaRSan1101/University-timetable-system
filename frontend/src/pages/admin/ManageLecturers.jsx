@@ -393,28 +393,45 @@ const ManageLecturers = () => {
                                         {/* Subject Selection */}
                                         {selectedCourseId && (
                                             <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50 p-2 space-y-1">
-                                                {allSubjects.filter(s => s.course == selectedCourseId).map(sub => (
-                                                    <label key={sub.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={formData.subjects.includes(sub.id)}
-                                                            onChange={(e) => {
-                                                                const newSubs = e.target.checked
-                                                                    ? [...formData.subjects, sub.id]
-                                                                    : formData.subjects.filter(id => id !== sub.id);
-                                                                setFormData({ ...formData, subjects: newSubs });
-                                                            }}
-                                                            className="rounded border-gray-300 text-blue-900 focus:ring-blue-900"
-                                                        />
-                                                        <div className="text-sm">
-                                                            <div className="font-medium text-gray-900">{sub.name}</div>
-                                                            <div className="text-xs text-gray-500">{sub.code}</div>
-                                                        </div>
-                                                    </label>
-                                                ))}
-                                                {allSubjects.filter(s => s.course == selectedCourseId).length === 0 && (
-                                                    <p className="text-xs text-center text-gray-400 py-4">No subjects found for this course.</p>
-                                                )}
+                                                {(() => {
+                                                    // Get all subjects assigned to OTHER lecturers
+                                                    const assignedSubjectIds = lecturers
+                                                        .filter(lec => panelMode === 'edit' ? lec.id !== formData.id : true)
+                                                        .flatMap(lec => lec.subjects?.map(s => s.id) || []);
+
+                                                    // Filter subjects: match course AND not assigned to others
+                                                    const availableSubjects = allSubjects.filter(s =>
+                                                        s.course == selectedCourseId && !assignedSubjectIds.includes(s.id)
+                                                    );
+
+                                                    return availableSubjects.length > 0 ? (
+                                                        availableSubjects.map(sub => (
+                                                            <label key={sub.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={formData.subjects.includes(sub.id)}
+                                                                    onChange={(e) => {
+                                                                        const newSubs = e.target.checked
+                                                                            ? [...formData.subjects, sub.id]
+                                                                            : formData.subjects.filter(id => id !== sub.id);
+                                                                        setFormData({ ...formData, subjects: newSubs });
+                                                                    }}
+                                                                    className="rounded border-gray-300 text-blue-900 focus:ring-blue-900"
+                                                                />
+                                                                <div className="text-sm">
+                                                                    <div className="font-medium text-gray-900">{sub.name}</div>
+                                                                    <div className="text-xs text-gray-500">{sub.code}</div>
+                                                                </div>
+                                                            </label>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-xs text-center text-gray-400 py-4">
+                                                            {allSubjects.filter(s => s.course == selectedCourseId).length === 0
+                                                                ? 'No subjects found for this course.'
+                                                                : 'All subjects for this course are already assigned to other lecturers.'}
+                                                        </p>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
 

@@ -35,7 +35,7 @@ class Subject(models.Model):
     # Lecturer is now optional
     lecturer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='subjects')
     
-    # Year field removed as requested
+    # Year field removed - not in database schema
     
     semester = models.IntegerField(choices=((1, '1'), (2, '2')))
     weekly_hours = models.IntegerField(default=3)
@@ -62,3 +62,36 @@ class SystemSettings(models.Model):
     def get_settings(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+class Assessment(models.Model):
+    ASSESSMENT_TYPES = (
+        ('Assignment', 'Assignment'),
+        ('Quiz', 'Quiz'),
+        ('Exam', 'Exam'),
+        ('Project', 'Project'),
+        ('Presentation', 'Presentation'),
+        ('Lab Report', 'Lab Report'),
+    )
+    
+    STATUS_CHOICES = (
+        ('Active', 'Active'),
+        ('Scheduled', 'Scheduled'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    )
+    
+    title = models.CharField(max_length=200)
+    assessment_type = models.CharField(max_length=50, choices=ASSESSMENT_TYPES)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='assessments')
+    lecturer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assessments')
+    due_date = models.DateField()
+    description = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-due_date']
+    
+    def __str__(self):
+        return f"{self.title} - {self.subject.code}"

@@ -14,7 +14,7 @@ import ManageClassrooms from './pages/admin/ManageClassrooms';
 import ManageStudents from './pages/admin/ManageStudents';
 import Profile from './pages/Profile';
 import Modules from './pages/student/Modules';
-import Grades from './pages/student/Grades';
+import StudentAssessments from './pages/student/StudentAssessments';
 import LecturerAssessments from './pages/lecturer/LecturerAssessments';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -76,7 +76,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
             <Route path="/student" element={<StudentDashboard />} />
             <Route path="/modules" element={<Modules />} />
-            <Route path="/assessments" element={<Grades />} />
+            <Route path="/assessments" element={<StudentAssessments />} />
           </Route>
 
           {/* Shared Protected Routes */}

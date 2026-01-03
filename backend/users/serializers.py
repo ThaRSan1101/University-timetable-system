@@ -178,17 +178,30 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     def get_subjects(self, obj):
         if obj.course:
             from academics.models import Subject
-            # Filter by Semester (DB)
-            all_subjects = Subject.objects.filter(course=obj.course, semester=obj.semester)
+            import re
+            
+            # Get all subjects for this course and semester
+            all_subjects = Subject.objects.filter(
+                course=obj.course, 
+                semester=obj.semester
+            ).only('id', 'name', 'code', 'semester')
             
             # Filter by Year (Infer from Code: 1xx=Year 1, 2xx=Year 2, etc.)
-            filtered_codes = []
+            filtered_subjects = []
             for sub in all_subjects:
+                # Extract the numeric part from code (e.g., CST121 -> 121)
                 match = re.search(r'\d+', sub.code)
-                if match and match.group().startswith(str(obj.year)):
-                    filtered_codes.append(sub.code)
+                if match:
+                    code_number = match.group()
+                    # Check if first digit matches the year (e.g., 121 starts with 1 = Year 1)
+                    if code_number and code_number[0] == str(obj.year):
+                        filtered_subjects.append({
+                            'id': sub.id,
+                            'name': sub.name,
+                            'code': sub.code
+                        })
             
-            return filtered_codes
+            return filtered_subjects
         return []
     
 
