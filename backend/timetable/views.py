@@ -72,7 +72,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                 'time_range': {
                     'start': '08:00',
                     'end': '19:00',
-                    'slots': self._generate_time_slots()
+                    'slots': ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
                 }
             })
         

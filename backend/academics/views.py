@@ -177,16 +177,9 @@ class AssessmentViewSet(viewsets.ModelViewSet):
             return Assessment.objects.filter(lecturer=user).select_related('subject', 'subject__course', 'lecturer')
         elif user.role == 'student' and hasattr(user, 'student_profile'):
             if user.student_profile.course:
-                year = user.student_profile.year
-                # Filter by subject code year digit (4th character)
-                # Regex matches any 3 prefix chars followed by the year digit
-                # This is more robust than semester field which might be misconfigured
-                year_regex = r'^.{3}%d' % year
-                
                 return Assessment.objects.filter(
-                    subject__course=user.student_profile.course,
-                    subject__code__regex=year_regex
-                ).select_related('subject', 'subject__course', 'lecturer').order_by('due_date')
+                    subject__course=user.student_profile.course
+                ).select_related('subject', 'subject__course', 'lecturer')
         elif user.role == 'admin':
             return Assessment.objects.all().select_related('subject', 'subject__course', 'lecturer')
         
