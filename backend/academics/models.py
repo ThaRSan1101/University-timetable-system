@@ -50,6 +50,7 @@ class SystemSettings(models.Model):
     current_semester = models.IntegerField(choices=((1, 'Semester 1'), (2, 'Semester 2')), default=1, help_text="Currently active semester")
     academic_year = models.CharField(max_length=20, default='2024/2025', help_text="Current academic year (e.g., 2024/2025)")
     updated_at = models.DateTimeField(auto_now=True)
+    is_timetable_published = models.BooleanField(default=False, help_text="If true, timetable is visible to students and lecturers")
 
     class Meta:
         verbose_name = "System Settings"
