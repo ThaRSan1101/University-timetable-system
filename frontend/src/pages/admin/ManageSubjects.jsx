@@ -10,6 +10,10 @@ const ManageModules = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     // Form State
     const [formData, setFormData] = useState({
         name: '',
@@ -73,6 +77,18 @@ const ManageModules = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this module? This action cannot be undone.')) {
+            try {
+                await api.delete(`subjects/${id}/`);
+                setModules(modules.filter(m => m.id !== id));
+            } catch (err) {
+                console.error("Failed to delete module", err);
+                alert("Failed to delete module: " + (err.response?.data?.message || err.message));
+            }
+        }
+    };
+
     const getBadgeStyle = (deptName) => {
         const d = (deptName || '').toLowerCase();
         if (d.includes('comp')) return 'bg-blue-100 text-blue-700';
@@ -94,6 +110,18 @@ const ManageModules = () => {
             (m.semester?.toString() || '').includes(term)
         );
     });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredModules.length / itemsPerPage);
+    const paginatedModules = filteredModules.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -241,14 +269,15 @@ const ManageModules = () => {
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Course</th>
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider">Type</th>
                                         <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider text-right">Semester</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-blue-900 uppercase tracking-wider text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {filteredModules.length === 0 && !loading && (
                                         <tr><td colSpan="6" className="p-8 text-center text-gray-500">No modules found.</td></tr>
                                     )}
-                                    {filteredModules.map((sub) => (
-                                        <tr key={sub.id} className="hover:bg-gray-50 transition-colors">
+                                    {paginatedModules.map((sub) => (
+                                        <tr key={sub.id} className="hover:bg-gray-50 transition-colors group">
                                             <td className="px-6 py-4 font-bold text-gray-900 text-sm">{sub.code}</td>
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-900 text-sm">{sub.name}</div>
@@ -258,7 +287,14 @@ const ManageModules = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${getBadgeStyle(sub.course_name)}`}>
-                                                    {sub.course_name}
+                                                    {sub.course_name?.replace(/Computer Science and Technology/g, 'CST')
+                                                        .replace(/Industrial Information Technology/g, 'IIT')
+                                                        .replace(/Mineral Resources and Technology/g, 'MRT')
+                                                        .replace(/Science and Technology/g, 'SCT')
+                                                        .replace(/Management/g, 'MGT')
+                                                        .replace(/Export Agriculture/g, 'EAG')
+                                                        .replace(/Animal Science/g, 'ANS')
+                                                        || sub.course_name}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
@@ -266,16 +302,81 @@ const ManageModules = () => {
                                                     ? 'bg-purple-50 text-purple-700 border border-purple-100'
                                                     : 'bg-blue-50 text-blue-700 border border-blue-100'
                                                     }`}>
-                                                    {sub.room_type || 'Lecture Hall'}
+                                                    {sub.room_type === 'Lecture Hall' ? 'LH' : (sub.room_type === 'Computer Lab' ? 'CL' : sub.room_type)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className="text-sm font-medium text-gray-600 block">{sub.semester}</span>
                                             </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => handleDelete(sub.id)}
+                                                    className="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
+                                                    title="Remove Module"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Pagination */}
+                        <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
+                            <span className="text-sm text-gray-500">
+                                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredModules.length)} to {Math.min(currentPage * itemsPerPage, filteredModules.length)} of {filteredModules.length} modules
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                                >
+                                    ‹
+                                </button>
+
+
+                                {(() => {
+                                    const maxVisible = 3;
+                                    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                                    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+                                    if (endPage - startPage + 1 < maxVisible) {
+                                        startPage = Math.max(1, endPage - maxVisible + 1);
+                                    }
+
+                                    const pages = [];
+                                    for (let i = startPage; i <= endPage; i++) {
+                                        pages.push(i);
+                                    }
+
+                                    return pages.map(page => (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`w-8 h-8 flex items-center justify-center rounded transition-all shadow-sm font-bold ${currentPage === page
+                                                ? 'bg-blue-900 text-white'
+                                                : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    ));
+                                })()}
+
+
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                                >
+                                    ›
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

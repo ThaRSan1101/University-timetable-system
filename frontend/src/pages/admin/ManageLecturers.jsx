@@ -16,11 +16,14 @@ const ManageLecturers = () => {
     const uniqueDepartments = ['All Departments', ...new Set(lecturers.map(l => l.department).filter(Boolean))];
     const [activeFilter, setActiveFilter] = useState('All Departments');
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     // Form State
     const [formData, setFormData] = useState({
         user: { username: '', email: '' },
         password: '', // New field for password input
-        staffId: '',
         staffId: '',
         department: '',
         faculty: '',
@@ -140,10 +143,23 @@ const ManageLecturers = () => {
                 await api.post('users/create_lecturer/', payload);
                 toast.success('Lecturer created successfully');
             } else {
-                // Handle Edit save if needed, currently not implemented fully in this block? 
-                // The original code only had 'add' block inside try, and 'else' falls through?
-                // No, only 'add' calls API. Edit logic seems missing in handleSubmit in original file!
-                // Wait, I should verify if Edit logic was evident.
+                // Edit Request
+                const payload = {
+                    name: formData.user.username,
+                    email: formData.user.email,
+                    department: formData.department,
+                    faculty: formData.faculty,
+                    subjects: formData.subjects,
+                    availability: formData.availability
+                };
+
+                // Only include password if user typed one
+                if (formData.password && formData.password.trim() !== '') {
+                    payload.password = formData.password;
+                }
+
+                await api.put(`lecturers/${formData.id}/`, payload);
+                toast.success('Lecturer updated successfully');
             }
 
             setShowSidePanel(false);
@@ -160,6 +176,18 @@ const ManageLecturers = () => {
     const filteredLecturers = activeFilter === 'All Departments'
         ? lecturers
         : lecturers.filter(l => l.department === activeFilter || activeFilter.includes(l.department));
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredLecturers.length / itemsPerPage);
+    const paginatedLecturers = filteredLecturers.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilter]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -230,7 +258,7 @@ const ManageLecturers = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {filteredLecturers.map((lec) => (
+                                    {paginatedLecturers.map((lec) => (
                                         <tr key={lec.id} className="hover:bg-blue-50/30 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -293,10 +321,55 @@ const ManageLecturers = () => {
                             </table>
                             {/* Pagination */}
                             <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Showing {filteredLecturers.length} of {lecturers.length} lecturers</span>
+                                <span className="text-sm text-gray-500">
+                                    Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredLecturers.length)} to {Math.min(currentPage * itemsPerPage, filteredLecturers.length)} of {filteredLecturers.length} lecturers
+                                </span>
                                 <div className="flex gap-2">
-                                    <button className="px-4 py-1.5 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">Previous</button>
-                                    <button className="px-4 py-1.5 bg-blue-900 rounded-lg text-sm font-medium text-white shadow-md transition-all active:scale-95">Next</button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                                    >
+                                        ‹
+                                    </button>
+
+
+                                    {(() => {
+                                        const maxVisible = 3;
+                                        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                                        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+                                        if (endPage - startPage + 1 < maxVisible) {
+                                            startPage = Math.max(1, endPage - maxVisible + 1);
+                                        }
+
+                                        const pages = [];
+                                        for (let i = startPage; i <= endPage; i++) {
+                                            pages.push(i);
+                                        }
+
+                                        return pages.map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded transition-all shadow-sm font-bold ${currentPage === page
+                                                    ? 'bg-blue-900 text-white'
+                                                    : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ));
+                                    })()}
+
+
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                                    >
+                                        ›
+                                    </button>
                                 </div>
                             </div>
                         </div>

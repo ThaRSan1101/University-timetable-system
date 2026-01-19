@@ -10,6 +10,10 @@ const ManageStudents = () => {
     const [activeFilter, setActiveFilter] = useState('All Departments');
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     useEffect(() => {
         fetchStudents();
     }, []);
@@ -54,6 +58,18 @@ const ManageStudents = () => {
 
         return matchesDepartment && matchesSearch;
     });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const paginatedStudents = filteredStudents.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilter, searchTerm]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -117,7 +133,7 @@ const ManageStudents = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredStudents.length > 0 ? filteredStudents.map((stu) => (
+                            {paginatedStudents.length > 0 ? paginatedStudents.map((stu) => (
                                 <tr key={stu.id} className="hover:bg-blue-50/30 transition-colors">
                                     <td className="px-6 py-4">
                                         <div>
@@ -163,10 +179,55 @@ const ManageStudents = () => {
                         </tbody>
                     </table>
                     <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Showing {filteredStudents.length} of {students.length} students</span>
+                        <span className="text-sm text-gray-500">
+                            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredStudents.length)} to {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} students
+                        </span>
                         <div className="flex gap-2">
-                            <button className="px-4 py-1.5 border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-600 hover:bg-gray-50">Previous</button>
-                            <button className="px-4 py-1.5 bg-blue-900 rounded-lg text-sm font-medium text-white shadow-md">Next</button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                            >
+                                ‹
+                            </button>
+
+
+                            {(() => {
+                                const maxVisible = 3;
+                                let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                                let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+                                if (endPage - startPage + 1 < maxVisible) {
+                                    startPage = Math.max(1, endPage - maxVisible + 1);
+                                }
+
+                                const pages = [];
+                                for (let i = startPage; i <= endPage; i++) {
+                                    pages.push(i);
+                                }
+
+                                return pages.map(page => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`w-8 h-8 flex items-center justify-center rounded transition-all shadow-sm font-bold ${currentPage === page
+                                            ? 'bg-blue-900 text-white'
+                                            : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ));
+                            })()}
+
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all"
+                            >
+                                ›
+                            </button>
                         </div>
                     </div>
                 </div>
