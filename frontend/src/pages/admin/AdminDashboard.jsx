@@ -13,6 +13,7 @@ const AdminDashboard = () => {
     const [courses, setCourses] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('');
     const [selectedYear, setSelectedYear] = useState(''); // New state for Year filter
+    const [availableRooms, setAvailableRooms] = useState([]);
 
     const [currentSemester, setCurrentSemester] = useState(1);
     const [academicYear, setAcademicYear] = useState('2024/2025');
@@ -70,6 +71,7 @@ const AdminDashboard = () => {
             ]);
 
             setCourses(coursesRes.data);
+            setAvailableRooms(roomsRes.data);  // Make sure to add this state variable
             setStats([
                 { title: 'Total Courses', value: coursesRes.data.length.toString(), trend: 'Active', icon: 'book', color: 'blue' },
                 { title: 'Registered Lecturers', value: lecturersRes.data.length.toString(), trend: 'Active', icon: 'users', color: 'purple' },
@@ -103,10 +105,7 @@ const AdminDashboard = () => {
 
         // Filter by selected course
         if (selectedCourse) {
-            const courseObj = courses.find(c => String(c.id) === String(selectedCourse));
-            if (courseObj) {
-                filteredClasses = filteredClasses.filter(cls => cls.subject.course_name === courseObj.name);
-            }
+            filteredClasses = filteredClasses.filter(cls => String(cls.subject.course_id) === String(selectedCourse));
         }
 
         // Filter by selected year
@@ -118,6 +117,12 @@ const AdminDashboard = () => {
                 return yearChar === selectedYear;
             });
         }
+
+        // STRICT FILTER: Only show classes that match the *current filter options* (including semester)
+        // If the backend returned classes from a previous generation (Sem 1) but we are viewing Sem 2, hide them.
+        filteredClasses = filteredClasses.filter(cls => {
+            return Number(cls.subject.semester) === Number(currentSemester);
+        });
 
         return filteredClasses;
     };
@@ -216,6 +221,39 @@ const AdminDashboard = () => {
         }
     };
 
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedSlot, setSelectedSlot] = useState(null);
+    const [editFormData, setEditFormData] = useState({
+        day: '',
+        start_time: '',
+        classroom_id: ''
+    });
+
+    const handleSlotClick = (slot) => {
+        setSelectedSlot(slot);
+        setEditFormData({
+            day: slot.day,
+            start_time: slot.time.start,
+            classroom_id: slot.classroom.id
+        });
+        setShowEditModal(true);
+    };
+
+    const handleUpdateSlot = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+
+        try {
+            await api.patch(`timetable/${selectedSlot.id}/update_slot/`, editFormData);
+            setShowEditModal(false);
+            setMessage('Slot updated successfully!');
+            fetchStats();
+        } catch (error) {
+            alert("Failed to update slot.");
+        }
+    };
+
+
+
     const handlePublish = async () => {
         setPublishing(true);
         try {
@@ -231,6 +269,30 @@ const AdminDashboard = () => {
         } finally {
             setPublishing(false);
         }
+    };
+
+    const handleExport = () => {
+        if (!timetable || !timetable.days) return;
+
+        let content = `University Master Timetable\nAcademic Year: ${academicYear}\nSemester: ${currentSemester}\n\n`;
+        timetable.days.forEach(day => {
+            if (day.classes && day.classes.length > 0) {
+                content += `${day.day}:\n`;
+                day.classes.forEach(cls => {
+                    content += `  ${cls.time.start}-${cls.time.end} | ${cls.subject.code} ${cls.subject.name} | ${cls.subject.lecturer_name || 'TBA'} | Room ${cls.classroom.room_number}\n`;
+                });
+                content += '\n';
+            }
+        });
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `university_timetable_${academicYear.replace('/', '-')}_sem${currentSemester}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -249,6 +311,14 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex items-center gap-3">
                             <button
+                                onClick={handleExport}
+                                className="px-4 py-2 border border-blue-200 bg-white rounded-lg text-sm font-semibold text-blue-900 hover:bg-blue-50 flex items-center gap-2 transition-all shadow-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Export Schedule
+                            </button>
+
+                            <button
                                 onClick={() => setShowSemesterModal(true)}
                                 className="px-4 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-sm font-bold rounded-lg outline-none hover:bg-blue-100 transition-all flex items-center gap-2"
                             >
@@ -266,6 +336,8 @@ const AdminDashboard = () => {
                                     {publishing ? 'Processing...' : (isPublished ? 'Unpublish Schedule' : 'Publish Schedule')}
                                 </button>
                             )}
+
+
 
                             <button
                                 onClick={handleGenerate}
@@ -437,10 +509,6 @@ const AdminDashboard = () => {
                                         <h3 className="text-xl font-bold text-gray-900 mb-1">University Schedule Preview</h3>
                                         <p className="text-sm text-gray-500 font-medium italic">Viewing Master Timetable • Semester {currentSemester} - {academicYear}</p>
                                     </div>
-                                    <button className="px-4 py-2 border border-blue-200 bg-blue-50 rounded-lg text-sm font-semibold text-blue-900 hover:bg-blue-100 flex items-center gap-2 transition-all">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                        Export Schedule
-                                    </button>
                                 </div>
 
                                 <div className="flex items-center gap-3">
@@ -488,13 +556,14 @@ const AdminDashboard = () => {
                                         <option value="4">Year 4</option>
                                     </select>
 
-                                    <button
-                                        onClick={() => setShowSemesterModal(true)}
-                                        className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none hover:bg-blue-100 transition-all flex items-center gap-2"
+                                    <select
+                                        value={currentSemester}
+                                        onChange={(e) => handleChangeSemester(Number(e.target.value))}
+                                        className="px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-xs font-bold rounded-lg outline-none focus:ring-2 focus:ring-blue-900 transition-all"
                                     >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        Sem {currentSemester}
-                                    </button>
+                                        <option value="1">Sem 1</option>
+                                        <option value="2">Sem 2</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -539,6 +608,7 @@ const AdminDashboard = () => {
                                                             return (
                                                                 <div
                                                                     key={slot.id}
+                                                                    onClick={() => handleSlotClick(slot)}
                                                                     className={`absolute left-1 right-1 ${colorClass} rounded-lg p-2 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col overflow-hidden group z-10`}
                                                                     style={{ top: `${top + 2}px`, height: `${height - 4}px` }}
                                                                 >
@@ -583,7 +653,7 @@ const AdminDashboard = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {classes.length > 0 ? (
                                                         classes.map(slot => (
-                                                            <div key={slot.id} className="p-4 bg-gray-50 hover:bg-white rounded-2xl border border-transparent hover:border-blue-100 transition-all group flex items-start gap-4 shadow-sm hover:shadow-md">
+                                                            <div key={slot.id} onClick={() => handleSlotClick(slot)} className="p-4 bg-gray-50 hover:bg-white rounded-2xl border border-transparent hover:border-blue-100 transition-all group flex items-start gap-4 shadow-sm hover:shadow-md cursor-pointer">
                                                                 <div className="w-16 h-16 bg-blue-900 rounded-xl flex flex-col items-center justify-center text-white shrink-0 shadow-lg shadow-blue-900/20">
                                                                     <span className="text-xs font-bold leading-none">{slot.time.start.split(':')[0]}</span>
                                                                     <span className="text-[8px] font-bold opacity-50 uppercase mt-0.5">Start</span>
@@ -674,9 +744,87 @@ const AdminDashboard = () => {
                 )
             }
 
-            {/* Conflicts Modal Removed - Moved to Attention Needed Section */}
+            {/* Edit Slot Modal */}
+            {showEditModal && selectedSlot && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-in">
+                        <div className="p-6 border-b border-gray-100 bg-gray-50">
+                            <h3 className="text-lg font-bold text-gray-900">Edit Session Details</h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Caution: Moving this slot will <strong>LOCK</strong> it from auto-generation.
+                            </p>
+                        </div>
 
-        </div >
+                        <form onSubmit={handleUpdateSlot} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Subject</label>
+                                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-900 font-bold">
+                                    {selectedSlot.subject.name} ({selectedSlot.subject.code})
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Day</label>
+                                    <select
+                                        value={editFormData.day}
+                                        onChange={(e) => setEditFormData({ ...editFormData, day: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        required
+                                    >
+                                        {days.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Start Time</label>
+                                    <select
+                                        value={editFormData.start_time.substring(0, 5)}
+                                        onChange={(e) => setEditFormData({ ...editFormData, start_time: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        required
+                                    >
+                                        {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Classroom</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editFormData.classroom_id}
+                                    onChange={(e) => setEditFormData({ ...editFormData, classroom_id: e.target.value })}
+                                >
+                                    {availableRooms.map(room => (
+                                        <option key={room.id} value={room.id}>
+                                            {room.room_number} ({room.type} - {room.capacity} seats)
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-[10px] text-gray-400 mt-1">Changing classroom will bypass conflict checks manually.</p>
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-[#192e70] hover:bg-[#132356] text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                                >
+                                    Save & Lock
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+        </div>
     );
 };
 

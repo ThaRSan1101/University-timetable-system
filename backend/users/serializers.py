@@ -118,7 +118,7 @@ class LecturerProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LecturerProfile
-        fields = ['id', 'user', 'name', 'staffId', 'department', 'faculty', 'subjects', 'weeklyHours', 'maxHours', 'avatar', 'phone_number', 'address', 'date_of_birth', 'availability']
+        fields = ['id', 'user', 'name', 'staffId', 'department', 'faculty', 'subjects', 'weeklyHours', 'maxHours', 'avatar', 'phone_number', 'address', 'date_of_birth', 'availability', 'profile_picture']
 
     def get_name(self, obj):
         first = obj.user.first_name
@@ -130,6 +130,8 @@ class LecturerProfileSerializer(serializers.ModelSerializer):
         return obj.user.username
 
     def get_avatar(self, obj):
+        if obj.profile_picture:
+            return obj.profile_picture.url
         name = self.get_name(obj)
         import urllib.parse
         encoded_name = urllib.parse.quote(name)
@@ -164,7 +166,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentProfile
-        fields = ['id', 'user', 'name', 'department', 'course', 'course_code', 'year', 'semester', 'subjects']
+        fields = ['id', 'user', 'name', 'department', 'course', 'course_code', 'year', 'semester', 'subjects', 'profile_picture']
 
     def get_name(self, obj):
         first = obj.user.first_name

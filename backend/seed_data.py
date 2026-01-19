@@ -7,7 +7,7 @@ All users password: Tharsu@123
 import os
 import django
 import random
-from datetime import time
+
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'university_timetable.settings')

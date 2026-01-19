@@ -99,6 +99,40 @@ class TimetableViewSet(viewsets.ModelViewSet):
             }
         })
 
+    @action(detail=True, methods=['patch'])
+    def update_slot(self, request, pk=None):
+        """
+        Manually update a slot (Day, Time, Room).
+        This locks the slot so the generator won't move it.
+        """
+        slot = self.get_object()
+        
+        day = request.data.get('day', slot.day)
+        start_time = request.data.get('start_time') # "09:00"
+        classroom_id = request.data.get('classroom_id', slot.classroom_id)
+        
+        # Apply Updates
+        slot.day = day
+        if start_time:
+            try:
+                start = datetime.strptime(start_time, '%H:%M').time()
+                # Assuming 1 hour duration per slot or preserving existing duration
+                duration = datetime.combine(datetime.today(), slot.end_time) - datetime.combine(datetime.today(), slot.start_time)
+                slot.start_time = start
+                slot.end_time = (datetime.combine(datetime.today(), start) + duration).time()
+            except ValueError:
+                pass
+                
+        slot.classroom_id = classroom_id
+        
+        # Lock it!
+        slot.is_locked = True
+        slot.save()
+        
+        return Response({'status': 'success', 'message': 'Slot updated and locked.'})
+
+
+
     def _process_timetable_by_days(self, slots):
         """
         BACKEND LOGIC: Group and process slots by day
@@ -132,6 +166,7 @@ class TimetableViewSet(viewsets.ModelViewSet):
                         'id': slot.subject.id,
                         'name': slot.subject.name,
                         'code': slot.subject.code,
+                        'course_id': slot.subject.course.id if slot.subject.course else None,
                         'course_name': slot.subject.course.name if slot.subject.course else None,
                         'lecturer_name': slot.subject.lecturer.username if slot.subject.lecturer else None,
                         'semester': slot.subject.semester,

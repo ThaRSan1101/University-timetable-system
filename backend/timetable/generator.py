@@ -33,7 +33,8 @@ def generate_timetable_algo():
        - No double booking for students (Course + Year/Semester).
     """
     
-    # Clear existing timetable for regeneration
+    # Clear ALL existing timetable slots for a fresh start
+    # User requested to ignore manual edits/locks during regeneration
     TimetableSlot.objects.all().delete()
     
     # Get active semester from settings
@@ -63,7 +64,9 @@ def generate_timetable_algo():
     DEFAULT_BATCH_SIZE = 30
     
     for subject in subjects:
+        # Since we wiped the DB, existing slots is always 0
         hours_needed = subject.weekly_hours
+        
         hours_scheduled = 0
         
         # Determine Year Level for Break Time Logic

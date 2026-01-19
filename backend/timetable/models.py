@@ -15,6 +15,7 @@ class TimetableSlot(models.Model):
     day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
     start_time = models.TimeField()
     end_time = models.TimeField()
+    is_locked = models.BooleanField(default=False)
     
     class Meta:
         unique_together = ('classroom', 'day', 'start_time') # Room can't be double booked

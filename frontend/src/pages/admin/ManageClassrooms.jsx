@@ -247,8 +247,8 @@ const ManageClassrooms = () => {
                                                 <button
                                                     onClick={() => toggleStatus(room)}
                                                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${!room.is_active
-                                                            ? 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-                                                            : 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200'
+                                                        ? 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                                                        : 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200'
                                                         }`}
                                                 >
                                                     <span className={`w-1.5 h-1.5 rounded-full ${!room.is_active ? 'bg-gray-500' : 'bg-emerald-500'}`}></span>
@@ -281,18 +281,33 @@ const ManageClassrooms = () => {
                                         ‹
                                     </button>
 
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                        <button
-                                            key={page}
-                                            onClick={() => setCurrentPage(page)}
-                                            className={`w-8 h-8 flex items-center justify-center rounded transition-all shadow-sm font-bold ${currentPage === page
+                                    {(() => {
+                                        const maxVisible = 3;
+                                        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                                        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+                                        if (endPage - startPage + 1 < maxVisible) {
+                                            startPage = Math.max(1, endPage - maxVisible + 1);
+                                        }
+
+                                        const pages = [];
+                                        for (let i = startPage; i <= endPage; i++) {
+                                            pages.push(i);
+                                        }
+
+                                        return pages.map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded transition-all shadow-sm font-bold ${currentPage === page
                                                     ? 'bg-blue-900 text-white'
                                                     : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    ))}
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ));
+                                    })()}
 
                                     <button
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
